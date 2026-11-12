@@ -625,7 +625,7 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
     class="build" on any element        revealed one at a time with →
     data-auto="500" on a section       its builds reveal by themselves, one every 500 ms
     data-skip on a section             left out of the show, its numbers and the print; the edit view still shows it
-    data-public on the stage           a copy exported from the edit view, to hand out: it has no edit view
+    data-public on the stage           a public copy made in the edit view, to hand out: it has no edit view
   The engine sets .current on the slide shown, .on on each build revealed, and adds a <span class="counter"> to every slide.
   URL: ?print opens the print dialog once loaded; ?presenter is the presenter window; ?view is one read-only slide, used
   for the presenter's panes and the edit view's thumbnails and layout previews.
@@ -639,7 +639,7 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
   // ?presenter is the window that S opens, ?view is one read-only slide in an iframe; anything else is the deck
   const params = new URLSearchParams(location.search);
   const mode = params.has('presenter') ? 'presenter' : params.has('view') ? 'view' : 'deck';
-  const canEdit = mode === 'deck' && !document.querySelector('#stage[data-public]');  // an exported copy has no edit view
+  const canEdit = mode === 'deck' && !document.querySelector('#stage[data-public]');  // a public copy has no edit view
   const here = location.href.split(/[?#]/)[0];
   const KEY = 'deck:' + location.pathname;
   const EDIT_KEY = KEY + ':edit';
@@ -831,6 +831,7 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
       case 'Escape':
         if (!editing) return false;
         if (!ed.menu.hidden) showLayouts(false);
+        else if (!ed.copyBox.hidden) showCopy(false);
         else if (ed.sel) select(null);
         else edit(false);
         break;
@@ -1120,6 +1121,7 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
       settle();
       select(null);
       showLayouts(false);
+      showCopy(false);
     }
     editing = on;
     store.set(on ? '1' : '', EDIT_KEY);
@@ -1136,7 +1138,7 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
   function editCss() {
     return `
       @media screen{
-        #edit,#edit-bar,#edit-rail,#edit-status,#edit-layer,#edit-layouts{display:none}
+        #edit,#edit-bar,#edit-rail,#edit-status,#edit-layer,#edit-layouts,#edit-copy{display:none}
         html.editing,html.editing body{background:#EFEFEC}
         html.editing #stage{left:var(--edit-x);top:var(--edit-y);box-shadow:0 0 0 calc(1px / var(--scale)) rgba(0,0,0,.16)}
         /* nothing moves here: outlines are measured from what is on the slide */
@@ -1177,6 +1179,14 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
           box-shadow:0 0 0 1px rgba(0,0,0,.16),0 8px 24px rgba(0,0,0,.12);font:500 13px/1 system-ui,sans-serif;-webkit-font-smoothing:antialiased}
         #edit-layouts button{display:flex;flex-direction:column;gap:6px;padding:6px;border:0;border-radius:3px;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
         #edit-layouts button:hover{background:rgba(0,0,0,.06)}
+        /* what Public copy leaves out, under its button */
+        html.editing #edit-copy{position:fixed;z-index:30;display:block;width:300px;box-sizing:border-box;padding:14px 16px;border-radius:4px;background:#fff;color:#111110;
+          box-shadow:0 0 0 1px rgba(0,0,0,.16),0 8px 24px rgba(0,0,0,.12);font:400 13px/1.45 system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+        #edit-copy p{margin:0 0 12px}
+        #edit-copy button{display:inline-flex;align-items:center;gap:6px;max-width:100%;height:30px;padding:0 12px;border:0;border-radius:3px;background:#111110;color:#fff;
+          font:500 13px/1 system-ui,sans-serif;cursor:pointer}
+        #edit-copy button:hover{background:#3A3A37}
+        #edit-copy button span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
         .e-tools,.e-ask-tools,.e-slide-tools{display:flex;align-items:center;gap:2px;margin-right:8px;padding-right:8px;border-right:1px solid rgba(0,0,0,.1)}
         .e-tools-label{margin:0 6px;color:#6B6B66;font:500 11px/1 system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase}
         .e-mode{display:flex;gap:2px;margin:0 8px;padding:2px;border-radius:4px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.16)}
@@ -1264,7 +1274,7 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
         .e-ask-send{background:#111110;color:#fff}
         #edit-ask .e-ask-send:disabled{background:#D1D1D6;cursor:default}
       }
-      @media print{#edit,#edit-bar,#edit-rail,#edit-status,#edit-layer,#edit-ask,#edit-layouts{display:none}}`;
+      @media print{#edit,#edit-bar,#edit-rail,#edit-status,#edit-layer,#edit-ask,#edit-layouts,#edit-copy{display:none}}`;
   }
   function buildEdit() {
     const css = document.createElement('style');
@@ -1287,7 +1297,7 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
       '<div class="e-mode">' + labelled('e-mode-edit', 'Edit', 'pencil', 'A click on the slide selects, a double-click types') +
       labelled('e-mode-suggest', 'Suggest', 'bubble', 'A click on the slide suggests a change') + '</div>' +
       tool('e-do-undo', 'Undo', 'reset') + labelled('e-save', 'Save', 'save', 'Save the deck to its file') +
-      tool('e-export', 'Export a copy to hand out', 'share') +
+      labelled('e-copy-out', 'Public copy', 'share', 'A copy of the deck to hand out') +
       tool('e-show', 'Slide Show', 'play') + tool('e-present', 'Presenter View', 'display');
     bar.firstChild.textContent = document.title;
     const rail = document.createElement('div');
@@ -1313,9 +1323,13 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
     ask.hidden = true;
     ask.innerHTML = '<div class="e-ask-path"></div><textarea rows="1" placeholder="Describe the change"></textarea><div class="e-ask-foot">' +
       tool('e-ask-del', 'Delete suggestion', 'trash') + tool('e-ask-send', 'Save suggestion', 'up') + '</div>';
+    const copyBox = document.createElement('div');
+    copyBox.id = 'edit-copy';
+    copyBox.hidden = true;
+    copyBox.innerHTML = '<p></p>' + labelled('e-copy-go', '', 'save');
     const layouts = deckLayouts(), menu = layoutMenu(layouts);
     const $ = s => panel.querySelector(s);
-    ed = { layer, menu, marks: layer.firstChild, draft: layer.children[1], hover: layer.lastChild, list: $('.e-list'), empty: $('.e-empty'), copy: $('.e-copy'),
+    ed = { layer, menu, copyBox, copyOut: bar.querySelector('.e-copy-out'), marks: layer.firstChild, draft: layer.children[1], hover: layer.lastChild, list: $('.e-list'), empty: $('.e-empty'), copy: $('.e-copy'),
       clear: $('.e-clear'), undoSuggestions: $('.e-undo'), rail, thumbs: [], dragged: null, where: status.firstChild, ask, ta: ask.querySelector('textarea'), path: ask.firstChild,
       send: ask.querySelector('.e-ask-send'), open: null, chain: [], level: 0, saved: [], undoTimer: null, key: 'deck:edit:' + location.pathname, items: [],
       outline: layer.children[2], tools: bar.querySelector('.e-tools'), modes: bar.querySelectorAll('.e-mode button'), undo: bar.querySelector('.e-do-undo'),
@@ -1336,6 +1350,7 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
       if (ed.open && !ask.contains(e.target) && !ed.askTools.contains(e.target) && closeAsk()) drawEdit();
       if (ed.typing && !ed.typing.el.contains(e.target)) commitText();
       if (!menu.contains(e.target) && !ed.add.contains(e.target)) showLayouts(false);
+      if (!copyBox.contains(e.target) && !ed.copyOut.contains(e.target)) showCopy(false);
       if (!notes.contains(e.target)) notes.blur();
     }, true);
     addEventListener('resize', () => { if (ed.open) placeAsk(); });
@@ -1349,7 +1364,7 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
     });
 
     // the buttons never take focus, so Space and the arrows keep steering the deck, and the composer keeps what is typed in it
-    for (const p of [bar, rail, panel, status, menu, ed.path]) p.addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
+    for (const p of [bar, rail, panel, status, menu, copyBox, ed.path]) p.addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
     ed.modes.forEach((b, n) => b.addEventListener('click', () => setSuggesting(n === 1)));
     setSuggesting(suggesting);
     const clicks = {
@@ -1369,7 +1384,7 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
       '.e-do-drop-slide': () => deleteSlide(slides[i]),
       '.e-do-undo': undoChange,
       '.e-save': saveDeck,
-      '.e-export': exportDeck,
+      '.e-copy-out': () => showCopy(copyBox.hidden),
       '.e-show': () => edit(false),
       '.e-present': () => act('s')
     };
@@ -1420,7 +1435,8 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
       showSlide(from);
     });
     stage.append(layer);
-    document.body.append(bar, rail, status, panel, ask, menu);
+    copyBox.lastChild.addEventListener('click', publicCopy);
+    document.body.append(bar, rail, status, panel, ask, menu, copyBox);
   }
   // the layouts New slide offers: those in the deck's <template data-deck="layouts">, or else one plain slide
   function deckLayouts() {
@@ -2296,7 +2312,7 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
   function serialize(change) {
     const copy = document.documentElement.cloneNode(true);
     change?.(copy);
-    copy.querySelectorAll('#notes, #deck-controls, #edit-bar, #edit-rail, #edit-status, #edit, #edit-ask, #edit-layer, #edit-layouts, #edit-css, .slide > .counter:last-child').forEach(n => n.remove());
+    copy.querySelectorAll('#notes, #deck-controls, #edit-bar, #edit-rail, #edit-status, #edit, #edit-ask, #edit-layer, #edit-layouts, #edit-copy, #edit-css, .slide > .counter:last-child').forEach(n => n.remove());
     copy.querySelectorAll('.slide.current').forEach(s => s.classList.remove('current'));
     copy.querySelectorAll('.build.on').forEach(b => b.classList.remove('on'));
     copy.classList.remove('editing');
@@ -2311,17 +2327,33 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
-  // A copy to hand out, downloaded beside the deck's own name: the deck as it is now, without the speaker notes, the skipped
+  const copyName = () => (decodeURIComponent(location.pathname).split('/').pop() || 'index.html').replace(/(\.html?)?$/i, '-public$1');
+  // under the Public copy button: what the copy is for and what it leaves out, said before it is made, and the button that makes it
+  function showCopy(on) {
+    ed.copyBox.hidden = !on;
+    ed.copyOut.setAttribute('aria-expanded', on);
+    if (!on) return;
+    const n = slides.length - shown().length;
+    ed.copyBox.firstChild.textContent = 'A copy of the deck as it is now, to send to your audience. It leaves out the speaker notes, ' +
+      (n ? `the ${n} skipped slide${n > 1 ? 's' : ''}` : 'any skipped slides') + ', the comments between the slides and the edit view. This deck stays as it is.';
+    ed.copyBox.lastChild.lastChild.textContent = 'Download ' + copyName();
+    const r = ed.copyOut.getBoundingClientRect();
+    ed.copyBox.style.top = r.bottom + 4 + 'px';
+    ed.copyBox.style.right = innerWidth - r.right + 'px';
+  }
+  // A copy to hand out, downloaded under a name of its own: the deck as it is now, without the speaker notes, the skipped
   // slides, the layouts and the comments between the slides, and marked so that it opens without the edit view
-  function exportDeck() {
+  function publicCopy() {
     settle();
-    const name = (decodeURIComponent(location.pathname).split('/').pop() || 'index.html').replace(/(\.html?)?$/i, '-public$1');
+    showCopy(false);
+    ed.copyOut.lastChild.textContent = 'Downloaded';
+    setTimeout(() => { ed.copyOut.lastChild.textContent = 'Public copy'; }, 2000);
     download(serialize(copy => {
       const all = copy.querySelector('#stage'), w = document.createTreeWalker(all, NodeFilter.SHOW_COMMENT), out = [];
       while (w.nextNode()) out.push(w.currentNode);
       [...out, ...copy.querySelectorAll('.s-notes, .slide[data-skip], template[data-deck="layouts"]')].forEach(drop);
       all.setAttribute('data-public', '');
-    }), name);
+    }), copyName());
   }
   // write the deck: to a file chosen once per visit where the browser can, else as a download
   async function saveDeck() {

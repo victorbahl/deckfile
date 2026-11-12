@@ -2020,7 +2020,7 @@ test.describe('saving', () => {
     expect(dialogs).toEqual([]);
   });
 
-  test('Export downloads a copy to hand out: no notes, skipped slides, layouts or comments, and no edit view', async ({ page }) => {
+  test('Public copy says what it leaves out, then downloads the deck without it and without the edit view', async ({ page }) => {
     await openOnly(page, `<!-- say hello -->
 <section class="slide">
   <h2>A</h2>
@@ -2037,10 +2037,28 @@ test.describe('saving', () => {
 </section>`);
     // what is not saved yet is in the copy too
     await retype(page, '2');
-    const button = page.locator('.e-export');
-    await expect(button).toHaveAttribute('aria-label', 'Export a copy to hand out');
-    const [download] = await Promise.all([page.waitForEvent('download'), button.click()]);
-    expect(download.suggestedFilename()).toBe(path.basename(deck).replace('.html', '-public.html'));
+    const button = page.locator('.e-copy-out'), box = page.locator('#edit-copy'), name = path.basename(deck).replace('.html', '-public.html');
+    await expect(button).toHaveText('Public copy');
+    await expect(box).toBeHidden();
+    await button.click();
+    await expect(box.locator('p')).toContainText('leaves out the speaker notes, the 1 skipped slide, the comments between the slides and the edit view');
+    await expect(box.locator('button')).toHaveText('Download ' + name);
+    expect(await unmarked(page, '#edit-copy button')).toEqual([]);
+    const fits = await box.boundingBox();
+    expect(fits.x + fits.width).toBeLessThanOrEqual(1600);
+    // Esc and a press elsewhere close it, and nothing is downloaded
+    await page.keyboard.press('Escape');
+    await expect(box).toBeHidden();
+    await expect(page.locator('#edit')).toBeVisible();
+    await button.click();
+    await page.locator('.e-name').click();
+    await expect(box).toBeHidden();
+    await button.click();
+    const [download] = await Promise.all([page.waitForEvent('download'), box.locator('button').click()]);
+    expect(download.suggestedFilename()).toBe(name);
+    await expect(box).toBeHidden();
+    await expect(button).toHaveText('Downloaded');
+    await expect(button).toHaveText('Public copy', { timeout: 4000 });
     const html = readFileSync(await download.path(), 'utf8');
     const stage = html.slice(html.indexOf('<div id="stage"'), html.indexOf('<script data-deck="engine">\n'));
     expect(stage).toContain('<div id="stage" data-public="">');
