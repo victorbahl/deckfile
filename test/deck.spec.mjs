@@ -2020,6 +2020,53 @@ test.describe('saving', () => {
     expect(dialogs).toEqual([]);
   });
 
+  test('Export downloads a copy to hand out: no notes, skipped slides, layouts or comments, and no edit view', async ({ page }) => {
+    await openOnly(page, `<!-- say hello -->
+<section class="slide">
+  <h2>A</h2>
+  <div class="s-notes"><p>Between us</p></div>
+</section>
+
+<!-- backup -->
+<section class="slide" data-skip>
+  <h2>B</h2>
+</section>
+
+<section class="slide">
+  <h2>C</h2>
+</section>`);
+    // what is not saved yet is in the copy too
+    await retype(page, '2');
+    const button = page.locator('.e-export');
+    await expect(button).toHaveAttribute('aria-label', 'Export a copy to hand out');
+    const [download] = await Promise.all([page.waitForEvent('download'), button.click()]);
+    expect(download.suggestedFilename()).toBe(path.basename(deck).replace('.html', '-public.html'));
+    const html = readFileSync(await download.path(), 'utf8');
+    const stage = html.slice(html.indexOf('<div id="stage"'), html.indexOf('<script data-deck="engine">\n'));
+    expect(stage).toContain('<div id="stage" data-public="">');
+    expect(stage.match(/<section/g)).toHaveLength(2);
+    expect(stage).not.toMatch(/s-notes|data-skip|<!--/);
+    expect(html).not.toMatch(/Between us|^<template data-deck="layouts">/m);
+    expect(html).toMatch(/^<!doctype html>\n<html[^>]*>\n<head>/i);
+    // the deck itself is as it was, with its edit still unsaved
+    expect(await heads(page)).toEqual(['A2', 'B', 'C']);
+    await expect(rowsSaid(page)).toHaveText(['Changed text']);
+
+    await page.goto(pathToFileURL(tempFile(html)).href);
+    expect(await heads(page)).toEqual(['A2', 'C']);
+    await expect(page.locator('.slide .counter')).toHaveText(['1 / 2', '2 / 2']);
+    await page.keyboard.press('e');
+    await expect(page.locator('#edit-bar')).toHaveCount(0);
+    await expect(page.locator('#deck-controls button')).toHaveCount(4);
+    await expect(page.locator('#deck-controls .c-edit')).toHaveCount(0);
+    await expect(page.locator('#deck-help')).not.toContainText('Edit view');
+    await page.keyboard.press('ArrowRight');
+    expect(await current(page)).toBe(1);
+    const pv = await openPresenter(page);
+    await expect(pv.locator('.p-count')).toHaveText('Slide 2 of 2');
+    await expect(pv.locator('#notes')).toHaveText('No notes for this slide.');
+  });
+
   test('leaving asks only while something is unsaved, and that includes text being typed', async ({ page }) => {
     const dialogs = recordDialogs(page);
     await page.keyboard.press('e');
