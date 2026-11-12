@@ -200,8 +200,8 @@ notes in the middle, and the unsaved edits or the suggestions on the right. The
 - **Public copy** makes a copy to send to your audience, named
   `…-public.html`: the deck as it is now, without the speaker notes, the
   skipped slides, the layouts and the comments between the slides. It says
-  what it leaves out before it downloads. The copy opens without the edit
-  view; it still presents and prints.
+  what it leaves out before it downloads. The copy has no edit view, and
+  not the code for it either; it still presents and prints.
 
 **Suggest** leaves the deck alone and collects notes for whoever edits the file:
 
@@ -309,9 +309,9 @@ Or copy or symlink [`skills/deck`](skills/deck) into `~/.claude/skills/`.
   read it: self-closed SVG tags, `<tbody>` in tables, entities. Comments and
   indentation stay, and later saves change only what you changed.
 - Photos sit beside the file, so a deck with photos travels as a folder.
-- A public copy is not locked. What was left out is gone from it, but the
-  engine is still in the file, and removing `data-public` from its stage
-  brings the edit view back.
+- A public copy has the engine without the code of the edit view, which
+  makes the file a good deal smaller. `update` puts the whole engine back;
+  the edit view then stays off until `data-public` is removed from the stage.
 
 ## Development
 

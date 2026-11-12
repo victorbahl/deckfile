@@ -505,6 +505,7 @@
     status();
   }
 
+  // ---- the edit view: a public copy leaves out everything from here to the line that ends it, so nothing above may need it there ----
   // edit view (E, deck window only): thumbnails left, the slide with its notes below, unsaved edits or suggestions right
   function edit(on) {
     if (!ed) buildEdit();
@@ -1733,7 +1734,8 @@
     ed.copyBox.style.right = innerWidth - r.right + 'px';
   }
   // A copy to hand out, downloaded under a name of its own: the deck as it is now, without the speaker notes, the skipped
-  // slides, the layouts and the comments between the slides, and marked so that it opens without the edit view
+  // slides, the layouts and the comments between the slides. It is marked so that it opens without the edit view, and an
+  // engine inlined in it loses the code of that view, most of its size
   function publicCopy() {
     settle();
     showCopy(false);
@@ -1744,6 +1746,8 @@
       while (w.nextNode()) out.push(w.currentNode);
       [...out, ...copy.querySelectorAll('.s-notes, .slide[data-skip], template[data-deck="layouts"]')].forEach(drop);
       all.setAttribute('data-public', '');
+      const engine = copy.querySelector('script[data-deck="engine"]');
+      if (engine) engine.textContent = engine.textContent.replace(/\n *\/\/ -+ the edit view[\s\S]*\/\/ -+ end of the edit view[^\n]*/, '');
     }), copyName());
   }
   // write the deck: to a file chosen once per visit where the browser can, else as a download
@@ -1785,6 +1789,7 @@
     };
     return navigator.clipboard ? navigator.clipboard.writeText(text).then(() => true, old) : Promise.resolve(old());
   }
+  // ---- end of the edit view ----
 
   // a refresh stays in the edit view; here at the end, because that view uses everything above
   if (canEdit && store.get(EDIT_KEY)) edit(true);

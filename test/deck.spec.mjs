@@ -2070,8 +2070,15 @@ test.describe('saving', () => {
     expect(await heads(page)).toEqual(['A2', 'B', 'C']);
     await expect(rowsSaid(page)).toHaveText(['Changed text']);
 
-    await page.goto(pathToFileURL(tempFile(html)).href);
+    // the engine in it has lost the edit view, and with it most of its size
+    expect(html).not.toMatch(/function (buildEdit|serialize|publicCopy)\b/);
+    expect(html.length).toBeLessThan(readFileSync(deck, 'utf8').length * .6);
+
+    const copy = tempFile(html);
+    await page.goto(pathToFileURL(copy).href);
     expect(await heads(page)).toEqual(['A2', 'C']);
+    // the keys of the edit view do nothing, and are no error
+    for (const key of ['n', 'Escape', 'Delete', 'ControlOrMeta+s', 'ControlOrMeta+z']) await page.keyboard.press(key);
     await expect(page.locator('.slide .counter')).toHaveText(['1 / 2', '2 / 2']);
     await page.keyboard.press('e');
     await expect(page.locator('#edit-bar')).toHaveCount(0);
