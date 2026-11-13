@@ -194,13 +194,16 @@ notes in the middle, and the unsaved edits or the suggestions on the right. The
   button brings it back.
 - **Undo** or `Cmd/Ctrl+Z` takes back one change. × on a row in the list of
   unsaved edits removes just that edit.
-- **Save** or `Cmd/Ctrl+S` writes the deck: to a file you choose in Chromium,
-  as a download elsewhere. It overwrites what is there, so reload first if an
-  agent or editor changed the file since you opened it.
-- **Public copy** makes a copy to send to your audience, named
-  `…-public.html`: the deck as it is now, without the speaker notes, the
-  skipped slides, the layouts and the comments between the slides. It says
-  what it leaves out before it downloads. The copy has no edit view, and
+- **Save** or `Cmd/Ctrl+S` writes the deck to its file. A page cannot reach
+  the file it was opened from, so Chromium asks once where it is: select the
+  deck in the dialog. Later saves and visits write to it, after one click to
+  allow it. Other browsers download the deck. A save overwrites what is there,
+  so reload first if an agent or editor changed the file since you opened it.
+- **Save as…** makes a copy and leaves this deck the one you edit. **Full
+  copy** is the whole deck, named `…-copy.html`. **Public copy** is one to
+  send to your audience, named `…-public.html`: the deck as it is now, without
+  the speaker notes, the skipped slides, the layouts and the comments between
+  the slides. It says what it leaves out first. The copy has no edit view, and
   not the code for it either; it still presents and prints.
 
 **Suggest** leaves the deck alone and collects notes for whoever edits the file:

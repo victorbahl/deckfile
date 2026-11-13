@@ -249,9 +249,12 @@ const previewOf = (page, n) => page.frameLocator(`#edit-layouts button:nth-child
 // a stand-in for the browser's file dialog: what is written ends up in window.saved
 async function fakeDialog(page) {
   await page.addInitScript(() => {
-    window.showSaveFilePicker = async () => {
+    window.showOpenFilePicker = async () => {
       window.asked = (window.asked || 0) + 1;
-      return { createWritable: async () => ({ write: async t => { window.saved = t; }, close: async () => {} }) };
+      return [{
+        name: decodeURIComponent(location.pathname).split('/').pop(),
+        createWritable: async () => ({ write: async t => { window.saved = t; }, close: async () => {} }),
+      }];
     };
   });
   await page.reload();
@@ -1997,20 +2000,92 @@ test.describe('saving', () => {
     await expect(page.locator('#edit')).toBeVisible();
   });
 
+  test('the file of the deck is asked for once and kept for later visits; another file is left alone', async ({ page }) => {
+    test.setTimeout(60000);
+    // a real file to write to takes a secure page: the deck, served under a made-up address, and the browser's own storage
+    let modified = new Date(0);
+    await page.route('https://deck.test/deck.html', r => r.fulfill({ path: deck, contentType: 'text/html', headers: { 'Last-Modified': modified.toUTCString() } }));
+    await page.addInitScript(() => {
+      const file = name => navigator.storage.getDirectory().then(d => d.getFileHandle(name, { create: true }));
+      window.showOpenFilePicker = async () => {
+        window.asked = (window.asked || 0) + 1;
+        return [await file(window.other ? 'other.html' : 'deck.html')];
+      };
+      window.showSaveFilePicker = () => file('copy.html');
+      window.sizeOf = async name => (await (await file(name)).getFile()).size;
+    });
+    const press = async label => {
+      await page.locator('.e-save').click();
+      await expect(page.locator('.e-save')).toHaveText(label);
+      await expect(page.locator('.e-save')).toHaveText('Save', { timeout: 4000 });
+      return page.evaluate(() => window.asked || 0);
+    };
+    const written = () => page.evaluate(async () => (await (await (await navigator.storage.getDirectory()).getFileHandle('deck.html')).getFile()).lastModified);
+
+    // the first save asks, the next ones of the visit do not
+    await page.goto('https://deck.test/deck.html');
+    await page.keyboard.press('e');
+    expect(await press('Saved')).toBe(1);
+    expect(await press('Saved')).toBe(1);
+
+    // a later visit writes to the file without asking, for as long as nothing else changed it
+    modified = new Date(await written());
+    await page.reload();
+    expect(await press('Saved')).toBe(0);
+    modified = new Date(0);
+    await page.reload();
+    expect(await press('Saved')).toBe(1);
+
+    // a file under another name is not written to, and the edits stay unsaved
+    await page.reload();
+    await clickOn(page, HEADING);
+    await page.locator('.e-do-duplicate').click();
+    await page.evaluate(() => { window.other = true; });
+    expect(await press('Wrong file')).toBe(1);
+    expect(await page.evaluate(() => window.sizeOf('other.html'))).toBe(0);
+    await expect(rowsSaid(page)).toHaveCount(1);
+
+    // a copy goes to a file of its own and leaves them unsaved too
+    const as = page.locator('.e-copy-out');
+    await as.click();
+    await page.locator('.e-copy-full').click();
+    await expect(as).toHaveText('Saved a copy');
+    expect(await page.evaluate(() => window.sizeOf('copy.html'))).toBeGreaterThan(0);
+    await expect(rowsSaid(page)).toHaveCount(1);
+    await page.evaluate(() => { window.other = false; });
+    expect(await press('Saved')).toBe(2);
+    await expect(rowsSaid(page)).toHaveCount(0);
+  });
+
   test('a cancelled or failed dialog saves nothing; without a dialog the deck downloads', async ({ page }) => {
     const dialogs = recordDialogs(page);
     await page.keyboard.press('e');
     await clickOn(page, HEADING);
     await page.locator('.e-do-duplicate').click();
 
-    await page.evaluate(() => { window.showSaveFilePicker = async () => { throw new DOMException('no', 'AbortError'); }; });
+    await page.evaluate(() => { window.showOpenFilePicker = async () => { throw new DOMException('no', 'AbortError'); }; });
     await page.locator('.e-save').click();
     await expect(page.locator('.e-save')).toHaveText('Save');
-    await page.evaluate(() => { window.showSaveFilePicker = async () => { throw new DOMException('no', 'NotAllowedError'); }; });
+    await page.evaluate(() => { window.showOpenFilePicker = async () => { throw new DOMException('no', 'NotAllowedError'); }; });
     await page.locator('.e-save').click();
     await expect(page.locator('.e-save')).toHaveText('Save failed');
+    await expect(page.locator('.e-save')).toHaveText('Save', { timeout: 4000 });
+    // a file that may not be written to yet is kept, and the next press writes to it without asking
+    await page.evaluate(() => {
+      let refused = false;
+      window.showOpenFilePicker = async () => [{ name: decodeURIComponent(location.pathname).split('/').pop(), createWritable: async () => {
+        if (!refused) { refused = true; throw new DOMException('no', 'NotAllowedError'); }
+        window.showOpenFilePicker = null;
+        return { write: async () => {}, close: async () => {} };
+      } }];
+    });
+    await page.locator('.e-save').click();
+    await expect(page.locator('.e-save')).toHaveText('Save again');
+    await expect(page.locator('.e-save')).toHaveText('Save', { timeout: 4000 });
+    await page.locator('.e-save').click();
+    await expect(page.locator('.e-save')).toHaveText('Saved');
 
-    await page.evaluate(() => { delete window.showSaveFilePicker; });
+    await page.evaluate(() => { delete window.showOpenFilePicker; });
     const [download] = await Promise.all([page.waitForEvent('download'), page.locator('.e-save').click()]);
     expect(download.suggestedFilename()).toBe(path.basename(deck));
     expect(readFileSync(await download.path(), 'utf8')).toMatch(/^<!doctype html>/i);
@@ -2020,7 +2095,7 @@ test.describe('saving', () => {
     expect(dialogs).toEqual([]);
   });
 
-  test('Public copy says what it leaves out, then downloads the deck without it and without the edit view', async ({ page }) => {
+  test('Save as offers a full copy and a public one, which says what it leaves out and has no edit view', async ({ page }) => {
     await openOnly(page, `<!-- say hello -->
 <section class="slide">
   <h2>A</h2>
@@ -2038,11 +2113,18 @@ test.describe('saving', () => {
     // what is not saved yet is in the copy too
     await retype(page, '2');
     const button = page.locator('.e-copy-out'), box = page.locator('#edit-copy'), name = path.basename(deck).replace('.html', '-public.html');
-    await expect(button).toHaveText('Public copy');
+    await page.evaluate(() => { delete window.showSaveFilePicker; });
+    await expect(button).toHaveText('Save as…');
     await expect(box).toBeHidden();
     await button.click();
-    await expect(box.locator('p')).toContainText('leaves out the speaker notes, the 1 skipped slide, the comments between the slides and the edit view');
-    await expect(box.locator('button')).toHaveText('Download ' + name);
+    await expect(box.locator('p').last()).toContainText('leaves out the speaker notes, the 1 skipped slide, the comments between the slides and the edit view');
+    await expect(box.locator('button')).toHaveText(['Full copy', 'Public copy']);
+    // the full copy is the deck as a save writes it, under a name of its own
+    const [whole] = await Promise.all([page.waitForEvent('download'), box.locator('.e-copy-full').click()]);
+    expect(whole.suggestedFilename()).toBe(path.basename(deck).replace('.html', '-copy.html'));
+    expect(readFileSync(await whole.path(), 'utf8')).toMatch(/Between us[\s\S]*data-skip/);
+    await expect(button).toHaveText('Save as…', { timeout: 4000 });
+    await button.click();
     expect(await unmarked(page, '#edit-copy button')).toEqual([]);
     const fits = await box.boundingBox();
     expect(fits.x + fits.width).toBeLessThanOrEqual(1600);
@@ -2054,11 +2136,11 @@ test.describe('saving', () => {
     await page.locator('.e-name').click();
     await expect(box).toBeHidden();
     await button.click();
-    const [download] = await Promise.all([page.waitForEvent('download'), box.locator('button').click()]);
+    const [download] = await Promise.all([page.waitForEvent('download'), box.locator('.e-copy-go').click()]);
     expect(download.suggestedFilename()).toBe(name);
     await expect(box).toBeHidden();
     await expect(button).toHaveText('Downloaded');
-    await expect(button).toHaveText('Public copy', { timeout: 4000 });
+    await expect(button).toHaveText('Save as…', { timeout: 4000 });
     const html = readFileSync(await download.path(), 'utf8');
     const stage = html.slice(html.indexOf('<div id="stage"'), html.indexOf('<script data-deck="engine">\n'));
     expect(stage).toContain('<div id="stage" data-public="">');

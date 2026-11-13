@@ -1184,6 +1184,7 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
         html.editing #edit-copy{position:fixed;z-index:30;display:block;width:300px;box-sizing:border-box;padding:14px 16px;border-radius:4px;background:#fff;color:#111110;
           box-shadow:0 0 0 1px rgba(0,0,0,.16),0 8px 24px rgba(0,0,0,.12);font:400 13px/1.45 system-ui,sans-serif;-webkit-font-smoothing:antialiased}
         #edit-copy p{margin:0 0 12px}
+        #edit-copy button + p{margin-top:16px}
         #edit-copy button{display:inline-flex;align-items:center;gap:6px;max-width:100%;height:30px;padding:0 12px;border:0;border-radius:3px;background:#111110;color:#fff;
           font:500 13px/1 system-ui,sans-serif;cursor:pointer}
         #edit-copy button:hover{background:#3A3A37}
@@ -1298,7 +1299,7 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
       '<div class="e-mode">' + labelled('e-mode-edit', 'Edit', 'pencil', 'A click on the slide selects, a double-click types') +
       labelled('e-mode-suggest', 'Suggest', 'bubble', 'A click on the slide suggests a change') + '</div>' +
       tool('e-do-undo', 'Undo', 'reset') + labelled('e-save', 'Save', 'save', 'Save the deck to its file') +
-      labelled('e-copy-out', 'Public copy', 'share', 'A copy of the deck to hand out') +
+      labelled('e-copy-out', 'Save as…', 'copy', 'A copy of the deck, whole or to hand out') +
       tool('e-show', 'Slide Show', 'play') + tool('e-present', 'Presenter View', 'display');
     bar.firstChild.textContent = document.title;
     const rail = document.createElement('div');
@@ -1327,7 +1328,8 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
     const copyBox = document.createElement('div');
     copyBox.id = 'edit-copy';
     copyBox.hidden = true;
-    copyBox.innerHTML = '<p></p>' + labelled('e-copy-go', '', 'save');
+    copyBox.innerHTML = '<p>A copy of the whole deck as it is now. This deck stays the one you edit.</p>' + labelled('e-copy-full', 'Full copy', 'copy') +
+      '<p></p>' + labelled('e-copy-go', 'Public copy', 'share');
     const layouts = deckLayouts(), menu = layoutMenu(layouts);
     const $ = s => panel.querySelector(s);
     ed = { layer, menu, copyBox, copyOut: bar.querySelector('.e-copy-out'), marks: layer.firstChild, draft: layer.children[1], hover: layer.lastChild, list: $('.e-list'), empty: $('.e-empty'), copy: $('.e-copy'),
@@ -1436,7 +1438,8 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
       showSlide(from);
     });
     stage.append(layer);
-    copyBox.lastChild.addEventListener('click', publicCopy);
+    copyBox.children[1].addEventListener('click', () => saveAs(false));
+    copyBox.lastChild.addEventListener('click', () => saveAs(true));
     document.body.append(bar, rail, status, panel, ask, menu, copyBox);
   }
   // the layouts New slide offers: those in the deck's <template data-deck="layouts">, or else one plain slide
@@ -2328,48 +2331,117 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
-  const copyName = () => (decodeURIComponent(location.pathname).split('/').pop() || 'index.html').replace(/(\.html?)?$/i, '-public$1');
-  // under the Public copy button: what the copy is for and what it leaves out, said before it is made, and the button that makes it
+  // The file dialogs of the browser, where it has them. A save asks with the one that opens a file: the deck is
+  // pointed at, and no new file can be made there by accident. A copy asks with the one that saves under a new name
+  const HTML = { id: 'deckfile', types: [{ description: 'HTML', accept: { 'text/html': ['.html'] } }] };
+  const askFile = async () => (await showOpenFilePicker(HTML))[0];
+  const askCopy = name => showSaveFilePicker({ ...HTML, suggestedName: name });
+  async function write(file, html) {
+    const out = await file.createWritable();
+    await out.write(html);
+    await out.close();
+  }
+  // what a button answers, for two seconds
+  function answer(button, label, was) {
+    button.lastChild.textContent = label;
+    setTimeout(() => { button.lastChild.textContent = was; }, 2000);
+  }
+  const deckName = () => decodeURIComponent(location.pathname).split('/').pop() || 'index.html';
+  const copyName = pub => deckName().replace(/(\.html?)?$/i, (pub ? '-public' : '-copy') + '$1');
+  // Whether a file kept from an earlier visit still is the one this page was opened from. A page cannot reach that
+  // file or know its folder, so this goes by what it can see: a file that may be written, with the name of the deck,
+  // last changed when the page was loaded
+  async function ours(file) {
+    try {
+      return file.name === deckName() && await file.requestPermission({ mode: 'readwrite' }) === 'granted' &&
+        Math.abs((await file.getFile()).lastModified - Date.parse(document.lastModified)) < 1000;
+    } catch { return false; }
+  }
+  // the file a save writes to, kept across visits under the path of the deck: kept(file) stores it, kept(null) forgets
+  // it, kept() gives it back. A browser that cannot keep it asks for the file on every visit
+  function kept(file) {
+    return new Promise(done => {
+      try {
+        const open = indexedDB.open('deckfile', 1);
+        open.onupgradeneeded = () => open.result.createObjectStore('files');
+        open.onerror = () => done();
+        open.onsuccess = () => {
+          try {
+            const files = open.result.transaction('files', 'readwrite').objectStore('files');
+            const req = file === undefined ? files.get(location.pathname) : files.put(file, location.pathname);
+            req.onsuccess = () => done(file === undefined ? req.result : undefined);
+            req.onerror = () => done();
+          } catch { done(); }
+        };
+      } catch { done(); }
+    });
+  }
+  // under the Save as button: the two copies, and what the one to hand out leaves out, said before it is made
   function showCopy(on) {
     ed.copyBox.hidden = !on;
     ed.copyOut.setAttribute('aria-expanded', on);
     if (!on) return;
     const n = slides.length - shown().length;
-    ed.copyBox.firstChild.textContent = 'A copy of the deck as it is now, to send to your audience. It leaves out the speaker notes, ' +
-      (n ? `the ${n} skipped slide${n > 1 ? 's' : ''}` : 'any skipped slides') + ', the comments between the slides and the edit view. This deck stays as it is.';
-    ed.copyBox.lastChild.lastChild.textContent = 'Download ' + copyName();
+    ed.copyBox.children[2].textContent = 'Or a copy to send to your audience. It leaves out the speaker notes, ' +
+      (n ? `the ${n} skipped slide${n > 1 ? 's' : ''}` : 'any skipped slides') + ', the comments between the slides and the edit view.';
     const r = ed.copyOut.getBoundingClientRect();
     ed.copyBox.style.top = r.bottom + 4 + 'px';
     ed.copyBox.style.right = innerWidth - r.right + 'px';
   }
-  // A copy to hand out, downloaded under a name of its own: the deck as it is now, without the speaker notes, the skipped
-  // slides, the layouts and the comments between the slides. It is marked so that it opens without the edit view, and an
-  // engine inlined in it loses the code of that view, most of its size
-  function publicCopy() {
+  // what the public copy leaves out: the speaker notes, the skipped slides, the layouts and the comments between the
+  // slides. It is marked so that it opens without the edit view, and an engine inlined in it loses the code of that
+  // view, most of its size
+  function trim(copy) {
+    const all = copy.querySelector('#stage'), w = document.createTreeWalker(all, NodeFilter.SHOW_COMMENT), out = [];
+    while (w.nextNode()) out.push(w.currentNode);
+    [...out, ...copy.querySelectorAll('.s-notes, .slide[data-skip], template[data-deck="layouts"]')].forEach(drop);
+    all.setAttribute('data-public', '');
+    const engine = copy.querySelector('script[data-deck="engine"]');
+    if (engine) engine.textContent = engine.textContent.replace(/\n *\/\/ -+ the edit view[\s\S]*\/\/ -+ end of the edit view[^\n]*/, '');
+  }
+  // A copy of the deck as it is now, under a name of its own: whole, or trimmed to hand out. It goes to a file chosen
+  // in a dialog where the browser has one, else it downloads. This deck stays the one that is edited and saved
+  async function saveAs(pub) {
     settle();
     showCopy(false);
-    ed.copyOut.lastChild.textContent = 'Downloaded';
-    setTimeout(() => { ed.copyOut.lastChild.textContent = 'Public copy'; }, 2000);
-    download(serialize(copy => {
-      const all = copy.querySelector('#stage'), w = document.createTreeWalker(all, NodeFilter.SHOW_COMMENT), out = [];
-      while (w.nextNode()) out.push(w.currentNode);
-      [...out, ...copy.querySelectorAll('.s-notes, .slide[data-skip], template[data-deck="layouts"]')].forEach(drop);
-      all.setAttribute('data-public', '');
-      const engine = copy.querySelector('script[data-deck="engine"]');
-      if (engine) engine.textContent = engine.textContent.replace(/\n *\/\/ -+ the edit view[\s\S]*\/\/ -+ end of the edit view[^\n]*/, '');
-    }), copyName());
+    const html = serialize(pub ? trim : undefined), name = copyName(pub);
+    let label = 'Saved a copy';
+    try {
+      if (window.showSaveFilePicker) await write(await askCopy(name), html);
+      else {
+        download(html, name);
+        label = 'Downloaded';
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') return;  // the file dialog was cancelled
+      label = 'Save failed';
+    }
+    answer(ed.copyOut, label, 'Save as…');
   }
-  // write the deck: to a file chosen once per visit where the browser can, else as a download
+  // Write the deck: to its file where the browser can, else as a download. The first save asks where that file is,
+  // later saves and visits write to it without asking. A file under another name is not the deck, and is left alone
   async function saveDeck() {
     settle();
-    const html = serialize(), name = decodeURIComponent(location.pathname).split('/').pop() || 'index.html';
-    let label = 'Saved';
+    const html = serialize(), name = deckName();
+    let label = 'Saved', asked = false;
     try {
-      if (window.showSaveFilePicker) {
-        ed.file ||= await showSaveFilePicker({ suggestedName: name, types: [{ description: 'HTML', accept: { 'text/html': ['.html'] } }] });
-        const out = await ed.file.createWritable();
-        await out.write(html);
-        await out.close();
+      if (window.showOpenFilePicker) {
+        if (!ed.file) {
+          let file = await kept();
+          if (!file || !await ours(file)) {
+            // forgotten before the dialog, so that a file that is refused or gone is not asked for again
+            if (file) kept(null);
+            file = await askFile();
+            asked = true;
+          }
+          if (file.name !== name) {
+            answer(ed.save, 'Wrong file', 'Save');
+            return;
+          }
+          ed.file = file;
+        }
+        await write(ed.file, html);
+        kept(ed.file);
       } else {
         download(html, name);
         label = 'Downloaded';
@@ -2378,11 +2450,15 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
       drawUnsaved();
     } catch (e) {
       if (e.name === 'AbortError') return;  // the file dialog was cancelled
-      ed.file = null;
-      label = 'Save failed';
+      // a browser may want a press of its own before it lets the page write to a file just chosen: the file stays
+      if (asked && ed.file && e.name === 'NotAllowedError') label = 'Save again';
+      else {
+        ed.file = null;
+        kept(null);
+        label = 'Save failed';
+      }
     }
-    ed.save.lastChild.textContent = label;
-    setTimeout(() => { ed.save.lastChild.textContent = 'Save'; }, 2000);
+    answer(ed.save, label, 'Save');
   }
   // the clipboard API, or the older execCommand where a browser refuses it
   function copyText(text) {
