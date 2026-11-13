@@ -25,6 +25,22 @@ Attributes:
 - `data-auto="600"` on a section reveals its `.build` elements by themselves, one every N ms, as soon as the slide is shown. Without a number it is 500. `→` and `←` take over.
 - `data-skip` on a section skips the slide: it stays in the file and the edit view, and is left out of the show, the slide numbers and the print.
 
+## Details
+
+```html
+<span data-detail="more">it costs less</span>   <!-- any element; a click opens the detail with that id -->
+<aside class="detail" id="more">                <!-- inside the same section; hidden until opened -->
+  <div class="kicker">Detail</div>
+  <h2>Where the saving comes from</h2>
+  <p>…</p>
+  <div class="s-notes"><p>Notes for while it is open</p></div>
+</aside>
+```
+
+A panel over the right half of the slide, the rest dimmed; it has room for a heading and a few lines, not a second slide.
+Use it for the answer to a question you expect. Each detail prints on a page of its own after its slide.
+`data-skip` on a detail keeps it in the file without opening it in the show or the print.
+
 ## Text
 
 ```html

@@ -36,7 +36,7 @@ test('the template shows everything in the theme: no class is left without a sli
   const slides = html.slice(html.indexOf('<div id="stage">\n'), html.indexOf('<script data-deck="engine">\n'));
   const used = new Set([...slides.matchAll(/class="([^"]*)"/g)].flatMap(m => m[1].split(/\s+/)));
   // the engine sets these itself
-  for (const c of ['current', 'on', 'counter']) used.add(c);
+  for (const c of ['current', 'on', 'counter', 'open', 'detail-close']) used.add(c);
   assert.deepEqual([...classes].filter(c => !used.has(c)), []);
 });
 

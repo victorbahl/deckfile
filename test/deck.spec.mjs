@@ -91,12 +91,15 @@ const builtOn = page => page.locator('.slide.current .build.on').count();
 async function info(page) {
   const slides = await page.evaluate(() => [...document.querySelectorAll('.slide')].map(s => ({
     builds: s.querySelectorAll('.build').length,
+    details: s.querySelectorAll('.detail').length,
     auto: s.dataset.auto === undefined ? null : +s.dataset.auto || 500,
     divider: s.classList.contains('divider'),
   })));
   const manual = slides.findIndex((s, k) => k > 0 && s.builds >= 2 && s.auto === null && slides[k + 1] && slides[k + 1].auto === null);
   const auto = slides.findIndex(s => s.builds >= 2 && s.auto !== null);
-  return { slides, n: slides.length, manual, auto, divider: slides.findIndex(s => s.divider) };
+  // the pages a print gives: one per slide, and one per detail after its slide
+  const pages = slides.reduce((sum, s) => sum + 1 + s.details, 0);
+  return { slides, n: slides.length, pages, manual, auto, divider: slides.findIndex(s => s.divider) };
 }
 const heads = page => page.evaluate(() => [...document.querySelectorAll('#stage > .slide')].map(s => s.querySelector('h1, h2')?.textContent));
 const items = page => page.locator(`${CUR} li`).allTextContents();
@@ -379,8 +382,8 @@ test.describe('slide view', () => {
     expect(await current(page)).toBe(0);
   });
 
-  test('print shows every slide with all builds, one page per slide', async ({ page }) => {
-    const { n } = await info(page);
+  test('print shows every slide with all builds, one page per slide and per detail', async ({ page }) => {
+    const { pages } = await info(page);
     await page.emulateMedia({ media: 'print' });
     const state = await page.evaluate(() => ({
       hidden: [...document.querySelectorAll('.slide')].filter(s => getComputedStyle(s).display === 'none').length,
@@ -388,7 +391,7 @@ test.describe('slide view', () => {
     }));
     expect(state).toEqual({ hidden: 0, faint: 0 });
     const pdf = (await page.pdf({ preferCSSPageSize: true })).toString('latin1');
-    expect(pdf.match(/\/Type\s*\/Page\b(?!s)/g)).toHaveLength(n);
+    expect(pdf.match(/\/Type\s*\/Page\b(?!s)/g)).toHaveLength(pages);
   });
 
   test('a slide with data-skip is passed over, not counted and not printed', async ({ page }) => {
@@ -884,12 +887,12 @@ test.describe('edit view', () => {
   });
 
   test('edit mode leaves no chrome in print', async ({ page }) => {
-    const { n } = await info(page);
+    const { pages: n } = await info(page);
     await page.keyboard.press('e');
     await page.emulateMedia({ media: 'print' });
     for (const id of ['#edit', '#edit-bar', '#edit-rail', '#edit-status', '#edit-layer', '#edit-ask', '#notes'])
       await expect(page.locator(id)).toBeHidden();
-    expect(await page.locator('.slide:visible').count()).toBe(n);
+    await expect.poll(() => page.locator('.slide:visible').count()).toBe(n);
   });
 
   test('Slide Show starts the slide with its builds still to come; E leaves it as it looks', async ({ page }) => {
@@ -3345,5 +3348,443 @@ test.describe('edit: slides', () => {
     await expect.poll(() => current(page)).toBe(1);
     await expect(pv.frameLocator('.p-slide iframe').locator('.slide.current')).toBeVisible();
     expect(errors).toEqual([]);
+  });
+});
+
+// a slide with two details, one with notes of its own, and a build; then a plain slide
+const DETAILED = `<section class="slide">
+  <h2>Main</h2>
+  <p><span class="o1" data-detail="d-one">One</span> and <button type="button" class="o2" data-detail="d-two">Two</button></p>
+  <p class="build">Built</p>
+  <aside class="detail" id="d-one">
+    <h2>Detail one</h2>
+    <p>More on one</p>
+    <div class="s-notes"><p>Say one</p></div>
+  </aside>
+  <aside class="detail" id="d-two">
+    <h2>Detail two</h2>
+  </aside>
+  <div class="s-notes"><p>Say main</p></div>
+</section>
+
+<section class="slide">
+  <h2>After</h2>
+</section>`;
+const OPEN = '.slide.current .detail.open';
+// the slide view of a deck with only those slides, on its first slide with no build shown
+async function openDetailed(page) {
+  const html = readFileSync(deck, 'utf8').replace(/<div id="stage">[\s\S]*?<\/div>\s*<script data-deck="engine">/,
+    `<div id="stage">\n\n${DETAILED}\n\n</div>\n\n<script data-deck="engine">`);
+  await page.goto(pathToFileURL(tempFile(html)).href);
+  expect(await current(page)).toBe(0);
+}
+
+test.describe('details', () => {
+  test('a click opens a detail, and Esc, ← or a click outside closes it, without moving the deck', async ({ page }) => {
+    await openDetailed(page);
+    await expect(page.locator('.detail.open')).toHaveCount(0);
+    await expect(page.locator('#d-one')).toBeHidden();
+    await page.locator('.o1').click();
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-one');
+    await expect(page.locator('#d-one')).toBeVisible();
+    await expect(page.locator('.o1')).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('.o2')).toHaveAttribute('aria-expanded', 'false');
+    expect(await current(page)).toBe(0);
+    expect(await builtOn(page)).toBe(0);
+    // a click inside it keeps it open
+    await page.locator('#d-one > p').first().click();
+    await expect(page.locator(OPEN)).toHaveCount(1);
+    await page.keyboard.press('Escape');
+    await expect(page.locator(OPEN)).toHaveCount(0);
+    await expect(page.locator('.o1')).toHaveAttribute('aria-expanded', 'false');
+
+    // a button opens one too, and another opener switches to its detail
+    await page.locator('.o2').click();
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-two');
+    await page.locator('.o1').click({ force: true });
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-one');
+    // the close button, a click outside, and ← each only close it
+    await page.locator('#d-one .detail-close').click();
+    await expect(page.locator(OPEN)).toHaveCount(0);
+    await page.locator('.o1').click();
+    const out = await page.locator(`${CUR} h2`).first().boundingBox();
+    await page.mouse.click(out.x + 10, out.y + 10);
+    await expect(page.locator(OPEN)).toHaveCount(0);
+    await page.locator('.o1').click();
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.locator(OPEN)).toHaveCount(0);
+    expect(await current(page)).toBe(0);
+    expect(await builtOn(page)).toBe(0);
+    await expect(page.locator(`${CUR} .counter`)).toHaveText('1 / 2');
+  });
+
+  test('→ closes the open detail and goes on, to the next build and then the next slide', async ({ page }) => {
+    await openDetailed(page);
+    await page.locator('.o1').click();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator(OPEN)).toHaveCount(0);
+    expect(await builtOn(page)).toBe(1);
+    await page.locator('.o2').click();
+    await page.keyboard.press('ArrowRight');
+    expect(await current(page)).toBe(1);
+    // back on the slide, nothing is open
+    await page.keyboard.press('ArrowLeft');
+    expect(await current(page)).toBe(0);
+    await expect(page.locator('.detail.open')).toHaveCount(0);
+  });
+
+  test('the presenter view shows the open detail, with its notes or else those of its slide', async ({ page }) => {
+    await openDetailed(page);
+    const pv = await openPresenter(page);
+    const cur = pv.frameLocator('.p-slide iframe');
+    await expect(pv.locator('#notes')).toContainText('Say main');
+    await page.locator('.o1').click();
+    await expect(cur.locator(OPEN)).toHaveAttribute('id', 'd-one');
+    await expect(page.locator('#notes')).toContainText('Say one');
+    await expect(pv.locator('#notes')).toContainText('Say one');
+    await expect(pv.locator('.p-left')).toHaveText('A detail is open: → closes it and goes on');
+    await page.locator('.o2').click({ force: true });
+    await expect(cur.locator(OPEN)).toHaveAttribute('id', 'd-two');
+    await expect(pv.locator('#notes')).toContainText('Say main');
+    // Esc in the presenter window closes it in the deck
+    await pv.keyboard.press('Escape');
+    await expect(page.locator(OPEN)).toHaveCount(0);
+    await expect(cur.locator('.detail.open')).toHaveCount(0);
+    await expect(pv.locator('.p-count')).toHaveText('Slide 1 of 2');
+  });
+
+  test('print gives each detail a page after its slide, and leaves the page as it was', async ({ page }) => {
+    await openDetailed(page);
+    await page.emulateMedia({ media: 'print' });
+    const pages = () => page.evaluate(() => [...document.querySelectorAll('#stage > .slide')].map(s =>
+      (s.classList.contains('detail-page') ? 'page ' : '') + (s.querySelector('.detail.open')?.id || s.querySelector('h2').textContent)));
+    await expect.poll(pages).toEqual(['Main', 'page d-one', 'page d-two', 'After']);
+    await expect(page.locator('.detail-page .detail.open')).toHaveCount(2);
+    await expect(page.locator('.detail-page .detail.open').first()).toBeVisible();
+    // on the slide's own page, no detail shows
+    expect(await page.locator('#stage > .slide:not(.detail-page) .detail').evaluateAll(all => all.map(x => getComputedStyle(x).visibility))).toEqual(['hidden', 'hidden']);
+    expect(await page.locator('.detail-close').evaluateAll(all => all.filter(b => b.checkVisibility()).length)).toBe(0);
+    const pdf = (await page.pdf({ preferCSSPageSize: true })).toString('latin1');
+    expect(pdf.match(/\/Type\s*\/Page\b(?!s)/g)).toHaveLength(4);
+    await page.emulateMedia({ media: 'screen' });
+    await expect(page.locator('.detail-page')).toHaveCount(0);
+    await expect(page.locator('.detail.open')).toHaveCount(0);
+    await expect(page.locator(`${CUR} .counter`)).toHaveText('1 / 2');
+  });
+
+  test('every detail of the deck fits its panel', async ({ page }) => {
+    const over = await page.evaluate(() => [...document.querySelectorAll('.slide')].flatMap(s => {
+      s.classList.add('current');
+      const all = [...s.querySelectorAll('.detail')].filter(x => {
+        x.classList.add('open');
+        const fits = x.scrollHeight <= x.clientHeight + 1 && x.scrollWidth <= x.clientWidth + 1;
+        x.classList.remove('open');
+        return !fits;
+      }).map(x => x.id);
+      s.classList.remove('current');
+      return all;
+    }));
+    expect(over).toEqual([]);
+  });
+
+  test('the edit view shows details as sub-slides under their slide, to edit like a slide', async ({ page }) => {
+    await fakeDialog(page);
+    await openOnly(page, DETAILED);
+    const subs = page.locator('.e-thumb').nth(0).locator('.e-sub');
+    await expect(subs).toHaveCount(2);
+    await expect(page.locator('.e-thumb').nth(1).locator('.e-sub')).toHaveCount(0);
+    await expect(page.frameLocator('.e-thumb:nth-child(1) .e-sub:nth-child(1) iframe').locator('.detail.open')).toHaveAttribute('id', 'd-one');
+    await subs.nth(0).click();
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-one');
+    await expect(subs.nth(0)).toHaveClass(/e-cur/);
+    await expect(page.locator('.e-thumb').nth(0)).not.toHaveClass(/e-cur/);
+    await expect(page.locator('.e-where')).toHaveText('Slide 1 of 2, detail 1 of 2');
+    await expect(page.locator('#notes')).toContainText('Say one');
+
+    // its text and its notes are edited as on a slide
+    await typeIn(page, '#d-one h2');
+    await page.keyboard.press('End');
+    await page.keyboard.type('!');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#d-one h2')).toHaveText('Detail one!');
+    await expect(page.frameLocator('.e-thumb:nth-child(1) .e-sub:nth-child(1) iframe').locator('#d-one h2')).toHaveText('Detail one!');
+    await subs.nth(1).click();
+    await expect(page.locator('#notes')).toContainText('No notes for this detail.');
+    await page.locator('#notes').click();
+    await page.keyboard.type('Say two');
+    await page.locator('.e-thumb-frame').nth(0).click();
+    await expect(page.locator('#notes')).toContainText('Say main');
+    await expect(page.locator('#d-two .s-notes')).toHaveText('Say two');
+    await expect(page.locator(`${CUR} > .s-notes`)).toHaveText('Say main');
+    // Esc closes the detail before it leaves the view
+    await subs.nth(1).click();
+    await page.keyboard.press('Escape');
+    await expect(page.locator(OPEN)).toHaveCount(0);
+    await expect(page.locator('#edit')).toBeVisible();
+
+    // the file has the edits, and none of what the engine added
+    const html = await save(page);
+    const stage = stageOf(html);
+    expect(stage).toContain('<h2>Detail one!</h2>');
+    expect(stage).toContain('<aside class="detail" id="d-two">\n    <h2>Detail two</h2>\n    <div class="s-notes"><p>Say two</p></div>\n  </aside>');
+    expect(stage).not.toMatch(/detail-close|aria-expanded|class="detail open"|detail-page/);
+  });
+
+  test('with a detail open, only the detail can be edited: what is behind it is out of reach', async ({ page }) => {
+    await openOnly(page, DETAILED);
+    await page.locator('.e-sub').nth(0).click();
+    // a click on the slide behind selects nothing, a double-click types nothing
+    const behind = await centre(page, `${CUR} > h2`);
+    await page.mouse.click(behind.x, behind.y);
+    await expect(page.locator('.e-tools')).toBeHidden();
+    await page.mouse.dblclick(behind.x, behind.y);
+    await expect(page.locator('#stage [contenteditable]')).toHaveCount(0);
+    // in the detail, Select parent stops at the detail
+    await clickOn(page, '#d-one > p');
+    await expect(page.locator('.e-tools')).toBeVisible();
+    await expect(page.locator('.e-do-parent')).toBeDisabled();
+    await typeIn(page, '#d-one h2');
+    await page.keyboard.press('Escape');
+    // a suggestion behind it falls on the detail as a whole, and its levels stop there
+    await page.locator('.e-mode-suggest').click();
+    await page.mouse.click(behind.x, behind.y);
+    await expect(page.locator('.e-ask-path')).toHaveText('Detail 1 › point');
+    await page.keyboard.press('Escape');
+    await clickOn(page, '#d-one > p');
+    await expect(page.locator('.e-crumb').first()).toHaveText('Detail 1');
+  });
+
+  test('the dimming behind a detail covers the whole slide, in thumbnails too', async ({ page }) => {
+    await openOnly(page, DETAILED);
+    const sub = page.frameLocator('.e-thumb:nth-child(1) .e-sub:nth-child(1) iframe').locator('.detail.open');
+    await expect(sub).toHaveCount(1);
+    // the shadow that dims the slide reaches its far corner whatever the size of the window: it is set in slide pixels
+    const reach = await sub.evaluate(d => {
+      const spread = +getComputedStyle(d).boxShadow.match(/(\d+(?:\.\d+)?)px(?![\s\S]*px)/)[1];
+      return spread - d.offsetLeft;
+    });
+    expect(reach).toBeGreaterThanOrEqual(0);
+  });
+
+  test('an edit in a detail keeps it open, and so do its undo and its row', async ({ page }) => {
+    await openOnly(page, DETAILED);
+    await page.locator('.e-sub').nth(0).click();
+    await clickOn(page, '#d-one > p');
+    await page.locator('.e-do-delete').click();
+    await expect(page.locator('#d-one > p')).toHaveCount(0);
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-one');
+    await expect(page.locator('.e-sub').nth(0)).toHaveClass(/e-cur/);
+    // its notes too
+    await page.locator('#notes').click();
+    await page.keyboard.type(' again');
+    await page.locator('.e-name').click();
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-one');
+    // undo, from the slide, opens the detail it was made in
+    await page.locator('.e-thumb-frame').nth(1).click();
+    await undoKey(page);
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-one');
+    await undoKey(page);
+    await expect(page.locator('#d-one > p')).toHaveText('More on one');
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-one');
+    // an edit on the slide itself leaves no detail open
+    await page.locator('.e-thumb-frame').nth(0).click();
+    await clickOn(page, `${CUR} > p.build`);
+    await page.locator('.e-do-delete').click();
+    await expect(page.locator('.detail.open')).toHaveCount(0);
+    // the row of an edit in a detail goes to it
+    await page.locator('.e-sub').nth(1).click();
+    await typeIn(page, '#d-two h2');
+    await page.keyboard.press('End');
+    await page.keyboard.type('!');
+    await page.keyboard.press('Enter');
+    await page.locator('.e-thumb-frame').nth(1).click();
+    await rowSaying(page, 'Changed text').click();
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-two');
+    await expect(page.locator('.e-sel')).toBeVisible();
+  });
+
+  test('with a detail open, the toolbar skips and deletes the detail, not its slide', async ({ page }) => {
+    await fakeDialog(page);
+    await openOnly(page, DETAILED);
+    const tools = page.locator('.e-slide-tools'), skip = page.locator('.e-do-skip-slide'), drop = page.locator('.e-do-drop-slide');
+    await expect(tools.locator('.e-tools-label')).toHaveText('Slide');
+    await page.locator('.e-sub').nth(1).click();
+    await expect(tools.locator('.e-tools-label')).toHaveText('Detail');
+    await expect(skip).toHaveAttribute('aria-label', 'Skip detail');
+    await expect(drop).toHaveAttribute('aria-label', 'Delete detail');
+    // nothing that adds slides
+    await expect(page.locator('.e-do-add')).toBeHidden();
+    await expect(page.locator('.e-do-copy-slide')).toBeHidden();
+
+    await skip.click();
+    await expect(page.locator('#d-two')).toHaveAttribute('data-skip', '');
+    await expect(page.locator(CUR)).not.toHaveAttribute('data-skip', /.*/);
+    await expect(skip).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-two');
+    await expect(page.locator('.e-sub').nth(1)).toHaveClass(/e-skip/);
+    await expect(page.locator('.e-sub').nth(1).locator('.e-thumb-skip')).toBeVisible();
+    await expect(page.locator('.e-thumb').nth(0)).not.toHaveClass(/e-skip/);
+    await expect(page.locator('.e-skipped')).toHaveText('Skipped: does not open in the show');
+    await expect(rowsSaid(page)).toHaveText(['Skipped detail']);
+    // the slide numbers do not change
+    await expect(page.locator('.slide .counter')).toHaveText(['1 / 2', '2 / 2']);
+    // on its slide, the toolbar is the slide's again
+    await page.locator('.e-thumb-frame').nth(0).click();
+    await expect(skip).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator('.e-skipped')).toBeHidden();
+    await expect(page.locator('.e-do-add')).toBeVisible();
+
+    // in the show it does not open, and what opened it is not marked as something to click
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.o2')).not.toHaveAttribute('aria-expanded', /.*/);
+    await expect(page.locator('.o1')).toHaveAttribute('aria-expanded', 'false');
+    await page.locator('.o2').click();
+    await expect(page.locator('.detail.open')).toHaveCount(0);
+    expect(await current(page)).toBe(0);
+    await page.locator('.o1').click();
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-one');
+    await page.keyboard.press('Escape');
+    // nor in the print
+    await page.emulateMedia({ media: 'print' });
+    await expect.poll(() => page.locator('.detail-page').count()).toBe(1);
+    await page.emulateMedia({ media: 'screen' });
+
+    // the file keeps it, skipped; undo brings it back
+    await page.keyboard.press('e');
+    expect(stageOf(await save(page))).toContain('<aside class="detail" id="d-two" data-skip="">');
+    await undoKey(page);
+    await expect(page.locator('#d-two')).not.toHaveAttribute('data-skip', /.*/);
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-two');
+  });
+
+  test('a skipped slide with a detail open is shown as skipped, and Skip then acts on the detail', async ({ page }) => {
+    await openOnly(page, DETAILED);
+    await page.locator('.e-do-skip-slide').click();
+    await page.locator('.e-sub').nth(0).click();
+    await expect(page.locator('.e-skipped')).toHaveText('Skipped: not in the show');
+    await expect(page.locator('.e-do-skip-slide')).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  test('deleting the detail on view goes to the next one, or else the one before, or else its slide', async ({ page }) => {
+    await openOnly(page, DETAILED);
+    const drop = page.locator('.e-do-drop-slide');
+    await page.locator('.e-sub').nth(0).click();
+    await drop.click();
+    // the slide stays, with the other detail on view
+    await expect(page.locator('.slide')).toHaveCount(2);
+    await expect(page.locator(`${CUR} > h2`)).toHaveText('Main');
+    await expect(page.locator('#d-one')).toHaveCount(0);
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-two');
+    await expect(page.locator('.e-sub')).toHaveCount(1);
+    await expect(page.locator('.e-sub').nth(0)).toHaveClass(/e-cur/);
+    await expect(page.locator('.o1')).not.toHaveAttribute('data-detail', /.*/);
+    await expect(rowsSaid(page)).toHaveText(['Deleted detail']);
+    // the last one: back to the slide, whose toolbar is the slide's
+    await drop.click();
+    await expect(page.locator('.detail')).toHaveCount(0);
+    await expect(page.locator('.e-thumb').nth(0)).toHaveClass(/e-cur/);
+    await expect(page.locator('.e-slide-tools .e-tools-label')).toHaveText('Slide');
+    await expect(drop).toHaveAttribute('aria-label', 'Delete slide');
+    await expect(page.locator('.slide')).toHaveCount(2);
+    // undo opens each again, in turn
+    await undoKey(page);
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-two');
+    await undoKey(page);
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-one');
+    await expect(page.locator('.e-sub')).toHaveCount(2);
+  });
+
+  test('× on another detail deletes it and leaves the view where it is', async ({ page }) => {
+    await openOnly(page, DETAILED);
+    await page.locator('.e-sub').nth(0).click();
+    const other = page.locator('.e-sub').nth(1);
+    await other.hover();
+    await other.locator('.e-thumb-del').click();
+    await expect(page.locator('#d-two')).toHaveCount(0);
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-one');
+    await expect(page.locator('.e-sub').nth(0)).toHaveClass(/e-cur/);
+    // from the slide, × on a detail stays on the slide
+    await page.locator('.e-thumb-frame').nth(0).click();
+    const sub = page.locator('.e-sub').nth(0);
+    await sub.hover();
+    await sub.locator('.e-thumb-del').click();
+    await expect(page.locator('.detail')).toHaveCount(0);
+    await expect(page.locator('.e-thumb').nth(0)).toHaveClass(/e-cur/);
+  });
+
+  test('a public copy leaves out a skipped detail, and its opener no longer opens anything', async ({ page }) => {
+    await openOnly(page, DETAILED.replace('<aside class="detail" id="d-two">', '<aside class="detail" id="d-two" data-skip>'));
+    await page.evaluate(() => { delete window.showSaveFilePicker; });
+    await page.locator('.e-save').click();
+    await expect(page.locator('#edit-copy')).toContainText('the 1 skipped detail');
+    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#edit-copy .e-copy-go').click()]);
+    const html = readFileSync(await download.path(), 'utf8');
+    const stage = html.slice(html.indexOf('<div id="stage"'), html.indexOf('<script data-deck="engine">\n'));
+    expect(stage).not.toContain('d-two');
+    expect(stage).toContain('data-detail="d-one"');
+  });
+
+  test('a selected element can get a detail of its own, and a detail can be deleted, with undo', async ({ page }) => {
+    await openOnly(page, `<section class="slide">\n  <h2>Plain</h2>\n  <p class="t">Click me</p>\n</section>`);
+    await clickOn(page, `${CUR} .t`);
+    await page.locator('.e-do-detail').click();
+    await expect(page.locator(`${CUR} .t`)).toHaveAttribute('data-detail', 'detail-1');
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'detail-1');
+    await expect(page.locator('.e-thumb').nth(0).locator('.e-sub')).toHaveCount(1);
+    await expect(rowsSaid(page)).toHaveText(['Added detail']);
+    // it is shown in the slide view like any other
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await page.locator(`${CUR} .t`).click();
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'detail-1');
+    await page.keyboard.press('e');
+    // the × of its sub-slide deletes it, and what opened it no longer does
+    const sub = page.locator('.e-sub').first();
+    await sub.hover();
+    await sub.locator('.e-thumb-del').click();
+    await expect(page.locator('.detail')).toHaveCount(0);
+    await expect(page.locator(`${CUR} .t`)).not.toHaveAttribute('data-detail', /.*/);
+    await expect(rowsSaid(page)).toHaveText(['Added detail', 'Deleted detail']);
+    await undoKey(page);
+    await expect(page.locator('.detail')).toHaveCount(1);
+    await expect(page.locator(`${CUR} .t`)).toHaveAttribute('data-detail', 'detail-1');
+  });
+
+  test('a duplicated slide gets details of its own, opened by its own elements', async ({ page }) => {
+    await openOnly(page, DETAILED);
+    await page.locator('.e-do-copy-slide').click();
+    const ids = await page.locator('.slide').nth(1).locator('.detail').evaluateAll(all => all.map(x => x.id));
+    expect(ids).toEqual(['d-one-2', 'd-two-2']);
+    expect(await page.locator('.slide').nth(1).locator('[data-detail]').evaluateAll(all => all.map(o => o.dataset.detail))).toEqual(ids);
+  });
+
+  test('suggestions on a detail belong to it, and show only while it is open', async ({ page }) => {
+    await openOnly(page, DETAILED);
+    await page.locator('.e-sub').nth(0).click();
+    await page.locator('.e-mode-suggest').click();
+    await suggest(page, '#d-one h2', 'Shorter');
+    await expect(page.locator('.e-marks .e-box')).toHaveCount(1);
+    await page.locator('.e-thumb-frame').nth(0).click();
+    await expect(page.locator('.e-marks .e-box')).toHaveCount(0);
+    await page.locator('.e-item').click();
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-one');
+    await expect(page.locator('.e-marks .e-box')).toHaveCount(1);
+  });
+
+  test('a public copy keeps the details, without their notes', async ({ page }) => {
+    await openOnly(page, DETAILED);
+    // without a save dialog, the public copy downloads the copy
+    await page.evaluate(() => { delete window.showSaveFilePicker; });
+    await page.locator('.e-save').click();
+    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#edit-copy .e-copy-go').click()]);
+    const html = readFileSync(await download.path(), 'utf8');
+    // the stage of a public copy carries data-public
+    const stage = html.slice(html.indexOf('<div id="stage"'), html.indexOf('<script data-deck="engine">\n'));
+    expect(stage.match(/<aside class="detail"/g)).toHaveLength(2);
+    expect(stage).not.toMatch(/Say one|Say main|detail-close|s-notes/);
+    await page.goto(pathToFileURL(tempFile(html)).href);
+    await page.locator('.o1').click();
+    await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-one');
+    await expect(page.locator('#d-one .detail-close')).toBeVisible();
   });
 });

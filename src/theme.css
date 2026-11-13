@@ -49,8 +49,9 @@ html,body{background:var(--black)}
 .slide.dark::after{background-image:var(--logo-dark)}
 .slide.dark.title::after,.slide.dark.closing::after{background-image:var(--icon-dark)}
 /* the top margin: where you are on the left, the slide number on the right */
-.slide>.kicker,.counter{position:absolute;top:72px;font:500 22px/1 var(--font-mono);letter-spacing:.06em;text-transform:uppercase}
+.slide>.kicker,.detail>.kicker,.counter{position:absolute;top:72px;font:500 22px/1 var(--font-mono);letter-spacing:.06em;text-transform:uppercase}
 .slide>.kicker{left:120px;color:var(--accent)}
+.detail>.kicker{left:96px;color:var(--accent)}
 .counter{right:120px;color:var(--muted)}
 
 /* type */
@@ -106,8 +107,19 @@ a{color:inherit}
 .keys td{padding:24px 24px 24px 0;border-top:1px solid var(--line)}
 .keys tr:last-child td{border-bottom:1px solid var(--line)}
 .keys td:first-child{width:320px}
+/* a detail: a panel over the right of its slide, the rest of the slide dimmed behind it. What opens it shows it can be clicked */
+.detail{position:absolute;top:0;right:0;bottom:0;z-index:2;width:960px;box-sizing:border-box;padding:176px 120px 120px 96px;overflow:hidden;
+  background:var(--paper);color:var(--ink);border-left:3px solid var(--accent);box-shadow:0 0 0 1920px rgba(12,12,11,.55);
+  transform:translateX(24px);opacity:0;transition:transform .25s ease,opacity .25s ease,visibility 0s .25s}
+.detail.open{transform:none;opacity:1;transition:transform .25s ease,opacity .25s ease}
+.detail h2{font-size:60px}
+.detail-close{position:absolute;top:56px;right:56px;display:grid;place-items:center;width:64px;height:64px;padding:0;
+  border:1.5px solid var(--line);border-radius:50%;background:none;color:var(--ink);cursor:pointer}
+.detail-close:hover{border-color:var(--ink)}
+[data-detail][aria-expanded]{text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:3px;text-underline-offset:10px}
+@media (prefers-reduced-motion:reduce){.detail{transition:none}}
 kbd{display:inline-block;min-width:1.3em;padding:9px 12px;border:1.5px solid var(--ink);border-radius:4px;
   font:500 .72em/1 var(--font-body);letter-spacing:0;text-align:center;margin-right:8px}
 
-/* print: the title card without its entrance */
-@media print{.slide.title *{animation:none!important}}
+/* print: the title card without its entrance, and a detail without its slide-in or the dimming around it */
+@media print{.slide.title *{animation:none!important}.detail{transition:none;box-shadow:none}}

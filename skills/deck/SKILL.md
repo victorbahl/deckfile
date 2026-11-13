@@ -54,7 +54,7 @@ The user can also change the deck from its edit view and save it. That first sav
 
 ### 4. Speaker notes
 
-Every section ends with `<div class="s-notes">…</div>`. Write what the speaker *says*, in their voice: the opening line, the transition into the next slide, and the one point to stress. Don't restate the slide text. Mark any line meant to be read out word for word as "verbatim".
+Every section ends with `<div class="s-notes">…</div>`. A detail may have notes of its own, inside its `<aside>`; without them, the presenter view shows the slide's. Write what the speaker *says*, in their voice: the opening line, the transition into the next slide, and the one point to stress. Don't restate the slide text. Mark any line meant to be read out word for word as "verbatim".
 
 ### 5. Self-check
 
@@ -65,6 +65,7 @@ Before you report the deck as done, check it and fix what fails:
 - [ ] Images are relative files that exist. Nothing is base64-encoded except small SVG logos.
 - [ ] Every font is openly licensed (for example SIL OFL), and no commercial face is named, even as a fallback.
 - [ ] The `data-deck="engine"` blocks are unchanged from the template (`npx github:roaldnefs/deckfile update --check <slug>/index.html` exits 0).
+- [ ] Every `data-detail` names the id of an `<aside class="detail">` in the same slide, and every detail fits its panel when open.
 - [ ] Nothing overflows the 1920×1080 canvas. As a rule of thumb, at most 5 bullets per slide, terminal panels of 12 lines or fewer, and headings that fit on two lines.
 - [ ] The slide count fits the time slot.
 

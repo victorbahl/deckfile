@@ -156,19 +156,49 @@ The engine needs very little markup:
 | `class="build"` on any element | revealed one at a time with `→` |
 | `data-auto="600"` on a section | its builds reveal by themselves, one every 600 ms (500 without a number), as soon as the slide shows; `→` and `←` take over |
 | `data-skip` on a section | the slide is skipped: left out of the show, the slide numbers and the print, and still there in the edit view |
+| `data-detail="more"` on any element | a click opens the `<aside class="detail" id="more">` of the same slide, see [Details](#details) |
 | `<div class="s-notes">` inside a slide | speaker notes, for the presenter and edit views |
 | `data-public` on the stage | set by **Save public copy…** on the copy it makes: the deck opens without the edit view |
 
-The engine sets `.current` on the slide shown and `.on` on each build it
-reveals, and adds a `<span class="counter">` with the slide number to every
-slide. Style against those classes: `.slide.current .diagram{animation:…}`
+The engine sets `.current` on the slide shown, `.on` on each build it
+reveals and `.open` on the detail shown, and adds a `<span class="counter">`
+with the slide number to every slide and a close button to every detail. Style against those classes: `.slide.current .diagram{animation:…}`
 starts an animation each time a slide shows, and `.slide:has(#step2.on)`
-changes a slide as a build lands. Saving from the edit view leaves all three out
-of the file.
+changes a slide as a build lands. Saving from the edit view leaves all of them
+out of the file.
 
 Everything else, such as title cards, dividers, dark slides, stat rows, code
 panels and windows, comes from the theme. Its components are listed in
 [`skills/deck/references/components.md`](skills/deck/references/components.md).
+
+### Details
+
+A slide can keep more than it shows. Put the rest in a detail, and open it when
+someone asks:
+
+```html
+<section class="slide">
+  <h2>Three reasons</h2>
+  <p>… <span data-detail="cost">it costs less</span> …</p>
+  <aside class="detail" id="cost">
+    <h2>Where the saving comes from</h2>
+    <p>…</p>
+    <div class="s-notes"><p>What to say while it is open.</p></div>
+  </aside>
+</section>
+```
+
+- A click on the element opens the detail; another opener on the slide
+  switches to its own. Esc, ←, the close button or a click outside closes it.
+  → closes it and goes on, to the next build or slide.
+- The slide does not move while a detail opens, and the slide numbers do not
+  count details.
+- The presenter view shows the open detail, with its own speaker notes, or
+  those of its slide when it has none.
+- Print gives each detail a page of its own, right after its slide: the slide
+  with that detail open.
+- The theme gives a detail its look and place. The default theme slides a
+  panel over the right half and dims the rest.
 
 Photographs live beside the deck as ordinary files and are referenced by
 relative path. Inline small things such as logos and icons as SVG; don't
@@ -189,6 +219,13 @@ it looks.
 - Click an element to select it, then move, duplicate or delete it from the
   toolbar.
 - Type in the notes pane to change the speaker notes.
+- A slide's details show as smaller thumbnails set in under it. Click one to
+  edit the slide with that detail open: its text, its elements and its notes,
+  as on a slide. While a detail is open, the toolbar's Skip and Delete act on
+  it rather than on its slide: a skipped detail stays in the file and does not
+  open in the show or print. × on a detail's thumbnail deletes it too. With an
+  element selected, the detail button of the toolbar adds a detail that
+  element opens.
 - Add, duplicate and delete slides from the toolbar, and drag a thumbnail to
   reorder. New slides come from the layouts in the deck's
   `<template data-deck="layouts">`, which you can change or add to.
@@ -209,8 +246,9 @@ it looks.
   - **Save a copy…** makes a copy of the whole deck, named `…-copy.html`, and
     leaves this deck the one you edit.
   - **Save public copy…** makes a copy to send to your audience, named
-    `…-public.html`: the deck as it is now, without the speaker notes, the
-    skipped slides, the layouts and the comments between the slides. The menu
+    `…-public.html`: the deck as it is now, details included, without the
+    speaker notes, the skipped slides and details, the layouts and the
+    comments between the slides. The menu
     says what it leaves out, then it asks where to put the copy in Chromium and
     downloads it elsewhere. The copy has no edit view, and not the code for it
     either; it still presents and prints.

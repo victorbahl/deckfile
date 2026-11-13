@@ -15,6 +15,10 @@ html,body{margin:0;height:100%;overflow:hidden}
 .build.on{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){.build{transition:none}}
 
+/* details: hidden until the engine adds .open; the theme gives them their look and place */
+.detail:not(.open){visibility:hidden;pointer-events:none}
+[data-detail][aria-expanded]{cursor:pointer}
+
 /* speaker notes: placed by the presenter and edit views */
 #notes{overflow:auto}
 #notes::before{content:"Speaker notes";display:block}
@@ -36,12 +40,15 @@ html.editing #deck-controls{display:none}
 .c-keys span{min-width:12px;padding:3px 6px;border:1px solid rgba(255,255,255,.32);border-radius:3px;
   font:500 11px/1.3 system-ui,sans-serif;text-align:center}
 
-/* print: one slide per page, all builds shown, skipped slides left out */
+/* print: one slide per page, all builds shown, skipped slides left out, then a page per detail */
 @media print{
   html,body{overflow:visible;height:auto;background:#fff}
   #stage{position:static;transform:none;width:1920px;height:auto}
   .slide{position:relative;height:1080px;break-after:page;page-break-after:always}
   .slide[data-skip]{display:none!important}
+  /* a detail prints on the page that follows its slide, a copy of the slide with that detail open */
+  .slide:not(.detail-page) .detail{visibility:hidden}
+  .detail-close{display:none!important}
   .build{opacity:1;transform:none;transition:none}
   #notes,#deck-controls{display:none!important}
   *{box-shadow:none!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
