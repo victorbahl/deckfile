@@ -2004,9 +2004,13 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
   }
   const slideOf = el => slides.find(x => x.contains(el));
   const ownClasses = el => [...el.classList].filter(c => c !== 'on' && c !== 'current');
+  // the heading of a slide, in the language shown: without the versions of other languages
   function headingOf(slide) {
-    const h = slide.querySelector('h1, h2, h3, blockquote');
-    return h ? clip(textOf(h), 60) : '';
+    const h = slide?.querySelector('h1, h2, h3, blockquote');
+    if (!h) return '';
+    const c = h.cloneNode(true);
+    c.querySelectorAll('[data-lang-off]').forEach(x => x.remove());
+    return clip(textOf(c), 60);
   }
   // what a suggestion records about its element: how the deck writes it, and where to find it again
   function describe(el) {
@@ -2318,9 +2322,12 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
     const parts = decodeURIComponent(location.pathname).split('/');
     const last = parts.pop() || 'index.html';
     const file = last === 'index.html' ? [parts.filter(Boolean).pop(), last].filter(Boolean).join('/') : last;
+    // a deck with languages: the agent is told once to make each change in every language, as a suggestion is made in one
+    const many = langs.length > 1 ? `The deck is in ${langs.map(l => l.toUpperCase()).join(' and ')} (lang attributes): ` +
+      'make each change in every language, unless the suggestion says otherwise. ' : '';
     return `Improve the deck \`${file}\` with the suggestions below. Slides are the \`<section class="slide">\` elements, ` +
       'numbered from 1 in document order. Positions are in the 1920×1080 slide frame, origin top left. ' +
-      'Each Element is a CSS selector for it in the deck as it was when suggested. ' +
+      'Each Element is a CSS selector for it in the deck as it was when suggested. ' + many +
       "Keep to the deck's existing conventions.\n\n" +
       ed.items.filter(s => s.note.trim()).map((s, n) =>
         `## ${n + 1}. Slide ${s.slide + 1}${s.heading ? ': ' + s.heading : ''}\n\n` +
