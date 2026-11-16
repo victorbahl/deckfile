@@ -1612,14 +1612,17 @@
     // a deck with languages: the agent is told once to make each change in every language, as a suggestion is made in one
     const many = langs.length > 1 ? `The deck is in ${langs.map(l => l.toUpperCase()).join(' and ')} (lang attributes): ` +
       'make each change in every language, unless the suggestion says otherwise. ' : '';
+    // A position only for a point or an area drawn on the slide: an element clicked is found by its selector and its text,
+    // and its box in pixels would only be noise for the agent
+    const items = ed.items.filter(s => s.note.trim()), placed = s => !s.picked;
     return `Improve the deck \`${file}\` with the suggestions below. Slides are the \`<section class="slide">\` elements, ` +
-      'numbered from 1 in document order. Positions are in the 1920×1080 slide frame, origin top left. ' +
+      'numbered from 1 in document order. ' + (items.some(placed) ? 'Positions are in the 1920×1080 slide frame, origin top left. ' : '') +
       'Each Element is a CSS selector for it in the deck as it was when suggested. ' + many +
       "Keep to the deck's existing conventions.\n\n" +
-      ed.items.filter(s => s.note.trim()).map((s, n) =>
+      items.map((s, n) =>
         `## ${n + 1}. Slide ${s.slide + 1}${s.heading ? ': ' + s.heading : ''}\n\n` +
-        `Where: ${s.kind === 'pin' ? `point x ${s.x}, y ${s.y}` : `box x ${s.x}-${s.x + s.w}, y ${s.y}-${s.y + s.h}`}, ` +
-        `on \`${s.el}\`${s.text ? ` "${s.text}"` : ''}\n\n` +
+        (placed(s) ? `Where: ${s.kind === 'pin' ? `point x ${s.x}, y ${s.y}` : `box x ${s.x}-${s.x + s.w}, y ${s.y}-${s.y + s.h}`}, ` : 'On ') +
+        `\`${s.el}\`${s.text ? ` "${s.text}"` : ''}\n\n` +
         `Element: \`${s.path}\`\n\n` +
         (s.stale ? 'This element has changed since the suggestion was made, so it may already be done.\n\n' : '') +
         `Suggestion: ${s.note.trim()}`).join('\n\n') + '\n';
