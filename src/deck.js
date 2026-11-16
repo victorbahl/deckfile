@@ -58,7 +58,21 @@
     set: (key, v) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch {} }
   };
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-  const builds = s => [...s.querySelectorAll('.build')];
+  // a slide's builds, one per step: the versions of a text in other languages reveal with it, as one step (see versionsAround)
+  const steps = s => {
+    const all = [...s.querySelectorAll('.build')], done = new Set(), out = [];
+    for (const b of all) {
+      if (done.has(b)) continue;
+      const step = versioned(b) ? versionsAround(b).filter(x => x.classList.contains('build')) : [b];
+      step.forEach(x => done.add(x));
+      out.push(step);
+    }
+    return out;
+  };
+  // a step is on when its first element is; turning one on or off turns all its versions
+  const stepOn = st => st[0].classList.contains('on');
+  const setStep = (st, on) => st.forEach(x => x.classList.toggle('on', on));
+  const builds = s => steps(s);
   const skips = s => s?.dataset.skip !== undefined;
   const shown = () => slides.filter(s => !skips(s));
   let i = Math.min(+store.get() || 0, slides.length - 1);
@@ -199,7 +213,7 @@
     det = k;
     slides.forEach((s, x) => s.classList.toggle('current', x === i));
     drawDetails();
-    builds(slides[i]).forEach(b => b.classList.toggle('on', built));
+    builds(slides[i]).forEach(st => setStep(st, built));
     if (mode === 'deck') store.set(i);
     drawNotes();
     if (mode === 'deck' && !built && slides[i].dataset.auto !== undefined) autoBuild(+slides[i].dataset.auto || 500);
@@ -208,9 +222,9 @@
   }
   function autoBuild(delay) {
     const step = () => {
-      const b = builds(slides[i]).find(x => !x.classList.contains('on'));
+      const b = builds(slides[i]).find(st => !stepOn(st));
       if (!b) return;
-      b.classList.add('on');
+      setStep(b, true);
       sync();
       autoTimer = setTimeout(step, delay);
     };
@@ -233,26 +247,26 @@
       drawDetails();
       drawNotes();
     }
-    const b = builds(slides[i]).find(x => !x.classList.contains('on'));
-    b ? b.classList.add('on') : show(seek(i + 1, 1));
+    const b = builds(slides[i]).find(st => !stepOn(st));
+    b ? setStep(b, true) : show(seek(i + 1, 1));
     sync();
   }
   function prev() {
     clearTimeout(autoTimer);
     if (det >= 0) return setDetail(-1);
-    const on = builds(slides[i]).filter(x => x.classList.contains('on'));
-    on.length ? on.pop().classList.remove('on') : show(seek(i - 1, -1), true);
+    const on = builds(slides[i]).filter(stepOn);
+    on.length ? setStep(on.pop(), false) : show(seek(i - 1, -1), true);
     sync();
   }
   // show slide n with its first k builds on, or all of them when k < 0, and its d-th detail open (presenter and view windows)
   function apply(n, k, d = -1) {
     show(n, k < 0, d);
-    builds(slides[i]).slice(0, Math.max(k, 0)).forEach(b => b.classList.add('on'));
+    builds(slides[i]).slice(0, Math.max(k, 0)).forEach(st => setStep(st, true));
   }
   // deck: tell an open presenter window where we are, slide i with k builds on and detail d open
   function sync() {
     if (mode !== 'deck' || !presenterWin || presenterWin.closed) return;
-    const k = builds(slides[i]).filter(b => b.classList.contains('on')).length;
+    const k = builds(slides[i]).filter(stepOn).length;
     presenterWin.postMessage({ deck: 'state', i, k, d: det, lang: cur }, '*');
   }
   // presenter: mirror the deck's state into the current and next panes, notes and labels
