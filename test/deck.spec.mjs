@@ -4005,6 +4005,31 @@ test.describe('languages', () => {
     expect(+await page.locator('[data-lang-missing]').evaluate(x => getComputedStyle(x).opacity)).toBe(1);
   });
 
+  test('in a deck with languages, the prompt asks for each change in every language', async ({ page }) => {
+    await openBilingual(page);
+    await page.keyboard.press('l');
+    await openSuggest(page);
+    await suggest(page, `${CUR} .sub[lang="fr"]`, 'Plus court');
+    const prompt = await copied(page);
+    expect(prompt).toContain('The deck is in EN and FR (lang attributes): make each change in every language, unless the suggestion says otherwise.');
+    expect(prompt).toContain('## 1. Slide 1: Bonjour');
+    expect(prompt).toContain('"Une ligne en français"');
+    // its mark stays on the slide in either language
+    await page.locator('#edit-bar .e-lang').click();
+    await expect(page.locator('.e-marks .e-box')).toHaveCount(1);
+    await expect(page.locator('.e-item')).toHaveCount(1);
+    await expect(page.locator('.e-changed')).toHaveCount(0);
+  });
+
+  test('a deck without languages writes the prompt as before', async ({ page }) => {
+    const html = readFileSync(deck, 'utf8').replace(/(<html[^>]*?) data-langs="[^"]*"/, '$1');
+    await page.goto(pathToFileURL(tempFile(html)).href);
+    await openSuggest(page);
+    await suggest(page, HEADING, 'Shorter');
+    const prompt = await copied(page);
+    expect(prompt).not.toContain('The deck is in');
+  });
+
   test('a public copy keeps both languages and the switch', async ({ page }) => {
     await openBilingual(page);
     await page.keyboard.press('e');
