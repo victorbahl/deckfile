@@ -265,7 +265,7 @@ kbd{display:inline-block;min-width:1.3em;padding:9px 12px;border:1.5px solid var
 
 <!-- 1 · title card -->
 <section class="slide dark title">
-  <div class="kicker">Example deck</div>
+  <div class="kicker"><span lang="en">Example deck</span><span lang="fr">Deck d'exemple</span></div>
   <h1>deckfile</h1>
   <p class="sub" lang="en">A presentation as one HTML file. No build step, no dependencies, and it works offline.</p>
   <p class="sub" lang="fr">Une présentation en un seul fichier HTML. Sans build, sans dépendances, et elle marche hors ligne.</p>
@@ -279,151 +279,172 @@ kbd{display:inline-block;min-width:1.3em;padding:9px 12px;border:1.5px solid var
 
 <!-- 2 · what is in the file, row by row -->
 <section class="slide">
-  <div class="kicker">Overview</div>
-  <h2>Everything is in one file</h2>
+  <div class="kicker"><span lang="en">Overview</span><span lang="fr">Vue d'ensemble</span></div>
+  <h2><span lang="en">Everything is in one file</span><span lang="fr">Tout est dans un fichier</span></h2>
   <table class="keys" style="white-space:nowrap">
-    <tr class="build"><td style="width:540px"><code>&lt;style data-deck="engine"&gt;</code></td><td>Places, scales and prints the slides</td><td class="small">Replaced on update</td></tr>
-    <tr class="build"><td><code>&lt;style data-deck="theme"&gt;</code></td><td>Colours, fonts and slide layouts</td><td class="small">Yours to change</td></tr>
-    <tr class="build"><td><code>&lt;section class="slide"&gt;</code></td><td>One per slide, with its speaker notes</td><td class="small">Yours to write</td></tr>
-    <tr class="build"><td><code>&lt;script data-deck="engine"&gt;</code></td><td>Keys, builds, presenter view, edit view</td><td class="small">Replaced on update</td></tr>
+    <tr class="build"><td style="width:540px"><code>&lt;style data-deck="engine"&gt;</code></td><td><span lang="en">Places, scales and prints the slides</span><span lang="fr">Place, met à l'échelle et imprime les slides</span></td><td class="small"><span lang="en">Replaced on update</span><span lang="fr">Remplacé à la mise à jour</span></td></tr>
+    <tr class="build"><td><code>&lt;style data-deck="theme"&gt;</code></td><td><span lang="en">Colours, fonts and slide layouts</span><span lang="fr">Couleurs, polices et mises en page</span></td><td class="small"><span lang="en">Yours to change</span><span lang="fr">À vous de le changer</span></td></tr>
+    <tr class="build"><td><code>&lt;section class="slide"&gt;</code></td><td><span lang="en">One per slide, with its speaker notes</span><span lang="fr">Une par slide, avec ses notes</span></td><td class="small"><span lang="en">Yours to write</span><span lang="fr">À vous de l'écrire</span></td></tr>
+    <tr class="build"><td><code>&lt;script data-deck="engine"&gt;</code></td><td><span lang="en">Keys, builds, presenter view, edit view</span><span lang="fr">Touches, builds, vue présentateur, édition</span></td><td class="small"><span lang="en">Replaced on update</span><span lang="fr">Remplacé à la mise à jour</span></td></tr>
   </table>
   <div class="s-notes">
-    <p>Open this file in a text editor and you will find these four parts, in this order, with one more style block after the theme for CSS of your own. Each press of → shows the next one.</p>
+    <p lang="en">Open this file in a text editor and you will find these four parts, in this order, with one more style block after the theme for CSS of your own. Each press of → shows the next one.</p>
+    <p lang="fr">Ouvrez ce fichier dans un éditeur : vous y trouverez ces quatre parties, dans cet ordre, avec un bloc de style de plus après le thème pour votre propre CSS. Chaque appui sur → montre la suivante.</p>
   </div>
 </section>
 
 <!-- 3 · section divider -->
 <section class="slide dark divider">
   <div class="kicker">01</div>
-  <h1>Write</h1>
+  <h1><span lang="en">Write</span><span lang="fr">Écrire</span></h1>
   <div class="s-notes">
-    <p>How a slide is written: its markup, classes, builds, speaker notes and theme.</p>
+    <p lang="en">How a slide is written: its markup, classes, builds, speaker notes and theme.</p>
+    <p lang="fr">Comment s'écrit une slide : son balisage, ses classes, ses builds, ses notes et son thème.</p>
   </div>
 </section>
 
 <!-- 4 · markup and what it renders -->
 <section class="slide">
-  <div class="kicker">01 · Write</div>
-  <h2>A slide is a section</h2>
+  <div class="kicker"><span lang="en">01 · Write</span><span lang="fr">01 · Écrire</span></div>
+  <h2><span lang="en">A slide is a section</span><span lang="fr">Une slide est une section</span></h2>
   <div class="cols">
     <div>
-      <h3>Markup</h3>
+      <h3><span lang="en">Markup</span><span lang="fr">Balisage</span></h3>
       <div class="term" style="box-sizing:border-box;min-height:452px">&lt;section class="slide"&gt;
-  &lt;h2&gt;One idea per slide&lt;/h2&gt;
+  &lt;h2&gt;<span lang="en">One idea per slide</span><span lang="fr">Une idée par slide</span>&lt;/h2&gt;
   &lt;ul&gt;
-    &lt;li&gt;Say one thing&lt;/li&gt;
-    &lt;li&gt;Show it large&lt;/li&gt;
+    &lt;li&gt;<span lang="en">Say one thing</span><span lang="fr">Dites une chose</span>&lt;/li&gt;
+    &lt;li&gt;<span lang="en">Show it large</span><span lang="fr">Montrez-la en grand</span>&lt;/li&gt;
   &lt;/ul&gt;
 &lt;/section&gt;</div>
     </div>
     <div>
-      <h3>Result</h3>
+      <h3><span lang="en">Result</span><span lang="fr">Résultat</span></h3>
       <div class="window"><div style="zoom:.41875;box-sizing:border-box;aspect-ratio:16/9;display:flex;flex-direction:column;padding:176px 120px 120px;background:var(--paper)">
-        <h2>One idea per slide</h2>
+        <h2><span lang="en">One idea per slide</span><span lang="fr">Une idée par slide</span></h2>
         <ul style="margin-top:auto">
-          <li>Say one thing</li>
-          <li>Show it large</li>
+          <li><span lang="en">Say one thing</span><span lang="fr">Dites une chose</span></li>
+          <li><span lang="en">Show it large</span><span lang="fr">Montrez-la en grand</span></li>
         </ul>
       </div></div>
     </div>
   </div>
   <div class="s-notes">
-    <p>The markup on the left renders as the slide on the right. The engine shows one section at a time and scales it to the window.</p>
+    <p lang="en">The markup on the left renders as the slide on the right. The engine shows one section at a time and scales it to the window.</p>
+    <p lang="fr">Le balisage de gauche donne la slide de droite. Le moteur montre une section à la fois et l'adapte à la fenêtre.</p>
   </div>
 </section>
 
 <!-- 5 · the classes of the theme -->
 <section class="slide">
-  <div class="kicker">01 · Write</div>
-  <h2>Classes lay it out</h2>
-  <p class="sub">The theme has a class for each kind of slide and each block on it.</p>
+  <div class="kicker"><span lang="en">01 · Write</span><span lang="fr">01 · Écrire</span></div>
+  <h2><span lang="en">Classes lay it out</span><span lang="fr">Les classes la mettent en page</span></h2>
+  <p class="sub" lang="en">The theme has a class for each kind of slide and each block on it.</p>
+  <p class="sub" lang="fr">Le thème a une classe pour chaque type de slide et chaque bloc qu'elle contient.</p>
   <div class="cols" style="grid-template-columns:repeat(3,1fr)">
     <div>
-      <h3>On the section</h3>
-      <p><code>title</code> opens the deck<br><code>divider</code> starts a part<br><code>closing</code> ends it<br><code>dark</code> turns any of them dark</p>
+      <h3><span lang="en">On the section</span><span lang="fr">Sur la section</span></h3>
+      <p lang="en"><code>title</code> opens the deck<br><code>divider</code> starts a part<br><code>closing</code> ends it<br><code>dark</code> turns any of them dark</p>
+      <p lang="fr"><code>title</code> ouvre le deck<br><code>divider</code> ouvre une partie<br><code>closing</code> le termine<br><code>dark</code> passe chacune en sombre</p>
     </div>
     <div>
-      <h3>Blocks</h3>
-      <p><code>cols</code> for columns<br><code>stats</code> for figures<br><code>keys</code> for a table<br><code>term</code> for code</p>
+      <h3><span lang="en">Blocks</span><span lang="fr">Blocs</span></h3>
+      <p lang="en"><code>cols</code> for columns<br><code>stats</code> for figures<br><code>keys</code> for a table<br><code>term</code> for code</p>
+      <p lang="fr"><code>cols</code> pour des colonnes<br><code>stats</code> pour des chiffres<br><code>keys</code> pour un tableau<br><code>term</code> pour du code</p>
     </div>
     <div>
-      <h3>Text</h3>
-      <p><code>kicker</code> says where you are<br><code>sub</code> leads in<br><code>small</code> for a source<br><code>build</code> waits for a press</p>
+      <h3><span lang="en">Text</span><span lang="fr">Texte</span></h3>
+      <p lang="en"><code>kicker</code> says where you are<br><code>sub</code> leads in<br><code>small</code> for a source<br><code>build</code> waits for a press</p>
+      <p lang="fr"><code>kicker</code> dit où vous êtes<br><code>sub</code> introduit<br><code>small</code> pour une source<br><code>build</code> attend un appui</p>
     </div>
   </div>
   <div class="s-notes">
-    <p>This slide is three columns with a label over each. The components reference lists every class with its markup.</p>
+    <p lang="en">This slide is three columns with a label over each. The components reference lists every class with its markup.</p>
+    <p lang="fr">Cette slide a trois colonnes, avec un libellé au-dessus de chacune. La référence des composants liste chaque classe avec son balisage.</p>
   </div>
 </section>
 
 <!-- 6 · builds, by hand -->
 <section class="slide">
-  <div class="kicker">01 · Write</div>
-  <h2>A build waits for a press</h2>
-  <p class="sub">Add <code>class="build"</code> to any element. Press → now.</p>
+  <div class="kicker"><span lang="en">01 · Write</span><span lang="fr">01 · Écrire</span></div>
+  <h2><span lang="en">A build waits for a press</span><span lang="fr">Un build attend un appui</span></h2>
+  <p class="sub" lang="en">Add <code>class="build"</code> to any element. Press → now.</p>
+  <p class="sub" lang="fr">Ajoutez <code>class="build"</code> à n'importe quel élément. Appuyez sur → maintenant.</p>
   <ul>
-    <li class="build">This line came on the first press.</li>
-    <li class="build">This one came on the second.</li>
-    <li class="build">Press ← to take it back.</li>
+    <li class="build" lang="en">This line came on the first press.</li>
+    <li class="build" lang="fr">Cette ligne est venue au premier appui.</li>
+    <li class="build" lang="en">This one came on the second.</li>
+    <li class="build" lang="fr">Celle-ci au deuxième.</li>
+    <li class="build" lang="en">Press ← to take it back.</li>
+    <li class="build" lang="fr">Appuyez sur ← pour revenir en arrière.</li>
   </ul>
   <div class="s-notes">
-    <p>The items reveal in document order. ↓ skips to the next slide with every item shown, and printing to PDF shows them all.</p>
+    <p lang="en">The items reveal in document order. ↓ skips to the next slide with every item shown, and printing to PDF shows them all.</p>
+    <p lang="fr">Les éléments apparaissent dans l'ordre du document. ↓ passe à la slide suivante avec tout affiché, et le PDF les montre tous.</p>
   </div>
 </section>
 
 <!-- 7 · builds, on a timer -->
 <section class="slide" data-auto="600">
-  <div class="kicker">01 · Write</div>
-  <h2>data-auto reveals them on a timer</h2>
-  <p class="sub">Add <code>data-auto="600"</code> to the section. Each item follows 600 ms after the last.</p>
+  <div class="kicker"><span lang="en">01 · Write</span><span lang="fr">01 · Écrire</span></div>
+  <h2><span lang="en">data-auto reveals them on a timer</span><span lang="fr">data-auto les révèle à intervalles</span></h2>
+  <p class="sub" lang="en">Add <code>data-auto="600"</code> to the section. Each item follows 600 ms after the last.</p>
+  <p class="sub" lang="fr">Ajoutez <code>data-auto="600"</code> à la section. Chaque élément suit le précédent après 600 ms.</p>
   <div class="stats">
-    <div class="stat build"><span class="n">0.6 s</span><span class="cap">First item</span></div>
-    <div class="stat build"><span class="n">1.2 s</span><span class="cap">Second item</span></div>
-    <div class="stat build"><span class="n">1.8 s</span><span class="cap">Third item</span></div>
+    <div class="stat build"><span class="n">0.6 s</span><span class="cap"><span lang="en">First item</span><span lang="fr">Premier élément</span></span></div>
+    <div class="stat build"><span class="n">1.2 s</span><span class="cap"><span lang="en">Second item</span><span lang="fr">Deuxième élément</span></span></div>
+    <div class="stat build"><span class="n">1.8 s</span><span class="cap"><span lang="en">Third item</span><span lang="fr">Troisième élément</span></span></div>
   </div>
   <div class="s-notes">
-    <p>The timer starts when you arrive with →. ↓ and ↑ show every item at once. Pressing → or ← takes over from the timer.</p>
+    <p lang="en">The timer starts when you arrive with →. ↓ and ↑ show every item at once. Pressing → or ← takes over from the timer.</p>
+    <p lang="fr">Le minuteur démarre quand on arrive avec →. ↓ et ↑ montrent tout d'un coup. Un appui sur → ou ← prend le relais du minuteur.</p>
   </div>
 </section>
 
 <!-- 8 · speaker notes -->
 <section class="slide">
-  <div class="kicker">01 · Write</div>
-  <h2>Speaker notes live inside the slide</h2>
+  <div class="kicker"><span lang="en">01 · Write</span><span lang="fr">01 · Écrire</span></div>
+  <h2><span lang="en">Speaker notes live inside the slide</span><span lang="fr">Les notes sont dans la slide</span></h2>
   <div class="cols">
     <div>
-      <h3>What the room sees</h3>
-      <p>Nothing. Notes show in the presenter view and the edit view, never on the slide or in the PDF.</p>
-      <p>Press <kbd>S</kbd> to read this slide's notes.</p>
+      <h3><span lang="en">What the room sees</span><span lang="fr">Ce que voit la salle</span></h3>
+      <p lang="en">Nothing. Notes show in the presenter view and the edit view, never on the slide or in the PDF.</p>
+      <p lang="fr">Rien. Les notes s'affichent dans la vue présentateur et la vue d'édition, jamais sur la slide ni dans le PDF.</p>
+      <p lang="en">Press <kbd>S</kbd> to read this slide's notes.</p>
+      <p lang="fr">Appuyez sur <kbd>S</kbd> pour lire les notes de cette slide.</p>
     </div>
     <div>
-      <h3>Markup</h3>
+      <h3><span lang="en">Markup</span><span lang="fr">Balisage</span></h3>
       <div class="term">&lt;section class="slide"&gt;
   &lt;h2&gt;…&lt;/h2&gt;
   &lt;div class="s-notes"&gt;
-    &lt;p&gt;What to say here.&lt;/p&gt;
+    &lt;p&gt;<span lang="en">What to say here.</span><span lang="fr">Ce qu'il faut dire.</span>&lt;/p&gt;
   &lt;/div&gt;
 &lt;/section&gt;</div>
     </div>
   </div>
   <div class="s-notes">
-    <p>These are this slide's notes. The presenter view and the edit view show them.</p>
+    <p lang="en">These are this slide's notes. The presenter view and the edit view show them.</p>
+    <p lang="fr">Ce sont les notes de cette slide. La vue présentateur et la vue d'édition les montrent.</p>
   </div>
 </section>
 
 <!-- 9 · details -->
 <section class="slide">
-  <div class="kicker">01 · Write</div>
-  <h2>A click opens the detail</h2>
-  <p class="sub">Keep the slide short. Put the rest in a detail, and open it when someone asks.</p>
+  <div class="kicker"><span lang="en">01 · Write</span><span lang="fr">01 · Écrire</span></div>
+  <h2><span lang="en">A click opens the detail</span><span lang="fr">Un clic ouvre le détail</span></h2>
+  <p class="sub" lang="en">Keep the slide short. Put the rest in a detail, and open it when someone asks.</p>
+  <p class="sub" lang="fr">Gardez la slide courte. Mettez le reste dans un détail, et ouvrez-le quand on vous le demande.</p>
   <div class="cols">
     <div>
-      <h3>Try it</h3>
-      <p>Click <span data-detail="detail-markup">the markup</span> or <span data-detail="detail-show">what the room sees</span>.</p>
-      <p>Esc or a click outside closes it. → closes it and goes on.</p>
+      <h3><span lang="en">Try it</span><span lang="fr">Essayez</span></h3>
+      <p lang="en">Click <span data-detail="detail-markup">the markup</span> or <span data-detail="detail-show">what the room sees</span>.</p>
+      <p lang="fr">Cliquez sur <span data-detail="detail-markup">le balisage</span> ou sur <span data-detail="detail-show">ce que voit la salle</span>.</p>
+      <p lang="en">Esc or a click outside closes it. → closes it and goes on.</p>
+      <p lang="fr">Échap ou un clic à côté le ferme. → le ferme et continue.</p>
     </div>
     <div>
-      <h3>Markup</h3>
+      <h3><span lang="en">Markup</span><span lang="fr">Balisage</span></h3>
       <div class="term">&lt;span <span class="b">data-detail="more"</span>&gt;…&lt;/span&gt;
 
 &lt;aside class="detail" <span class="b">id="more"</span>&gt;
@@ -432,31 +453,38 @@ kbd{display:inline-block;min-width:1.3em;padding:9px 12px;border:1.5px solid var
     </div>
   </div>
   <aside class="detail" id="detail-markup">
-    <div class="kicker">Detail</div>
-    <h2>Any element can open one</h2>
-    <p>Give it <code>data-detail</code> with the id of an <code>&lt;aside class="detail"&gt;</code> in the same slide.</p>
-    <p class="small">A detail can hold anything a slide holds, and its own speaker notes.</p>
+    <div class="kicker"><span lang="en">Detail</span><span lang="fr">Détail</span></div>
+    <h2><span lang="en">Any element can open one</span><span lang="fr">Tout élément peut en ouvrir un</span></h2>
+    <p lang="en">Give it <code>data-detail</code> with the id of an <code>&lt;aside class="detail"&gt;</code> in the same slide.</p>
+    <p lang="fr">Donnez-lui <code>data-detail</code> avec l'id d'un <code>&lt;aside class="detail"&gt;</code> de la même slide.</p>
+    <p class="small" lang="en">A detail can hold anything a slide holds, and its own speaker notes.</p>
+    <p class="small" lang="fr">Un détail peut contenir tout ce que contient une slide, et ses propres notes.</p>
     <div class="s-notes">
-      <p>These notes belong to the detail. The presenter view shows them while it is open.</p>
+      <p lang="en">These notes belong to the detail. The presenter view shows them while it is open.</p>
+      <p lang="fr">Ces notes appartiennent au détail. La vue présentateur les montre tant qu'il est ouvert.</p>
     </div>
   </aside>
   <aside class="detail" id="detail-show">
-    <div class="kicker">Detail</div>
-    <h2>In the room, on paper</h2>
+    <div class="kicker"><span lang="en">Detail</span><span lang="fr">Détail</span></div>
+    <h2><span lang="en">In the room, on paper</span><span lang="fr">En salle, sur papier</span></h2>
     <ul>
-      <li>Hidden until someone clicks</li>
-      <li>One page each in the PDF, after its slide</li>
-      <li>A sub-slide in the edit view</li>
+      <li lang="en">Hidden until someone clicks</li>
+      <li lang="fr">Caché jusqu'au clic</li>
+      <li lang="en">One page each in the PDF, after its slide</li>
+      <li lang="fr">Une page chacun dans le PDF, après sa slide</li>
+      <li lang="en">A sub-slide in the edit view</li>
+      <li lang="fr">Une sous-slide dans la vue d'édition</li>
     </ul>
   </aside>
   <div class="s-notes">
-    <p>Details are for the questions you expect: the slide stays light, and the answer is one click away.</p>
+    <p lang="en">Details are for the questions you expect: the slide stays light, and the answer is one click away.</p>
+    <p lang="fr">Les détails servent aux questions que vous attendez : la slide reste légère, et la réponse est à un clic.</p>
   </div>
 </section>
 
 <!-- 10 · languages -->
 <section class="slide">
-  <div class="kicker">01 · Write</div>
+  <div class="kicker"><span lang="en">01 · Write</span><span lang="fr">01 · Écrire</span></div>
   <h2><span lang="en">One file, two languages</span><span lang="fr">Un fichier, deux langues</span></h2>
   <div class="cols">
     <div>
@@ -467,7 +495,7 @@ kbd{display:inline-block;min-width:1.3em;padding:9px 12px;border:1.5px solid var
       <p lang="fr">Un texte sans <code>lang</code> s'affiche dans les deux.</p>
     </div>
     <div>
-      <h3>Markup</h3>
+      <h3><span lang="en">Markup</span><span lang="fr">Balisage</span></h3>
       <div class="term">&lt;html <span class="b">data-langs="en fr"</span>&gt;
 
 &lt;h2&gt;
@@ -484,16 +512,18 @@ kbd{display:inline-block;min-width:1.3em;padding:9px 12px;border:1.5px solid var
 
 <!-- 11 · theme tokens -->
 <section class="slide">
-  <div class="kicker">01 · Write</div>
-  <h2>A theme is a set of CSS tokens</h2>
+  <div class="kicker"><span lang="en">01 · Write</span><span lang="fr">01 · Écrire</span></div>
+  <h2><span lang="en">A theme is a set of CSS tokens</span><span lang="fr">Un thème est un jeu de tokens CSS</span></h2>
   <div class="cols">
     <div>
-      <h3>To brand a deck</h3>
-      <p>Set your colours, fonts and logo in the theme block, and every slide follows.</p>
-      <p>CSS for one deck goes in the last <code>&lt;style&gt;</code> block.</p>
+      <h3><span lang="en">To brand a deck</span><span lang="fr">Pour habiller un deck</span></h3>
+      <p lang="en">Set your colours, fonts and logo in the theme block, and every slide follows.</p>
+      <p lang="fr">Réglez vos couleurs, polices et logo dans le bloc du thème, et toutes les slides suivent.</p>
+      <p lang="en">CSS for one deck goes in the last <code>&lt;style&gt;</code> block.</p>
+      <p lang="fr">Le CSS propre à un deck va dans le dernier bloc <code>&lt;style&gt;</code>.</p>
     </div>
     <div>
-      <h3>Theme block</h3>
+      <h3><span lang="en">Theme block</span><span lang="fr">Bloc du thème</span></h3>
       <div class="term">:root{
   --primary:<span class="b">#111110</span>;
   --white:<span class="b">#F7F6F2</span>;
@@ -505,27 +535,31 @@ kbd{display:inline-block;min-width:1.3em;padding:9px 12px;border:1.5px solid var
     </div>
   </div>
   <div class="s-notes">
-    <p>These are real tokens from this file's theme block. The full list is in the theming reference.</p>
+    <p lang="en">These are real tokens from this file's theme block. The full list is in the theming reference.</p>
+    <p lang="fr">Ce sont de vrais tokens du thème de ce fichier. La liste complète est dans la référence du thème.</p>
   </div>
 </section>
 
 <!-- 12 · section divider -->
 <section class="slide dark divider">
   <div class="kicker">02</div>
-  <h1>Present</h1>
+  <h1><span lang="en">Present</span><span lang="fr">Présenter</span></h1>
   <div class="s-notes">
-    <p>What you get in front of a room: the presenter view, the keys and a PDF.</p>
+    <p lang="en">What you get in front of a room: the presenter view, the keys and a PDF.</p>
+    <p lang="fr">Ce que vous avez devant une salle : la vue présentateur, les touches et un PDF.</p>
   </div>
 </section>
 
 <!-- 13 · presenter view -->
 <section class="slide">
-  <div class="kicker">02 · Present</div>
-  <h2>S opens the presenter view</h2>
+  <div class="kicker"><span lang="en">02 · Present</span><span lang="fr">02 · Présenter</span></div>
+  <h2><span lang="en">S opens the presenter view</span><span lang="fr">S ouvre la vue présentateur</span></h2>
   <div class="cols" style="grid-template-columns:1fr 1.6fr;align-items:end">
     <div>
-      <p>A second window shows the current slide, what the next press brings, your notes, a timer and the clock.</p>
-      <p>Steer from either window. They stay in step.</p>
+      <p lang="en">A second window shows the current slide, what the next press brings, your notes, a timer and the clock.</p>
+      <p lang="fr">Une seconde fenêtre montre la slide en cours, ce que donne l'appui suivant, vos notes, un minuteur et l'heure.</p>
+      <p lang="en">Steer from either window. They stay in step.</p>
+      <p lang="fr">Pilotez depuis l'une ou l'autre. Elles restent synchronisées.</p>
     </div>
     <div class="window">
       <svg viewBox="0 0 960 600" role="img" aria-label="Drawing of the presenter view: timer on top, current slide on the left, next slide above the speaker notes on the right">
@@ -535,9 +569,11 @@ kbd{display:inline-block;min-width:1.3em;padding:9px 12px;border:1.5px solid var
         <rect x="146" y="21" width="28" height="28" rx="3" fill="#2A2A28"/><path d="M154 35a6 6 0 1 0 2-4.5" fill="none" stroke="#F2F2EF" stroke-width="2" stroke-linecap="round"/>
         <text x="934" y="42" text-anchor="end" fill="#8F8F8A" font-size="16" font-weight="500">10:24</text>
         <rect x="26" y="96" width="584" height="329" rx="3" fill="#F7F6F2"/>
-        <text x="62" y="128" fill="#C2310A" font-size="9" font-weight="500" letter-spacing="1">01 · WRITE</text>
+        <text x="62" y="128" fill="#C2310A" font-size="9" font-weight="500" letter-spacing="1" lang="en">01 · WRITE</text>
+        <text x="62" y="128" fill="#C2310A" font-size="9" font-weight="500" letter-spacing="1" lang="fr">01 · ÉCRIRE</text>
         <path d="M62 138.5h512M62 330.5h512M62 362.5h512M62 394.5h512" stroke="#111110" stroke-opacity=".16"/>
-        <text x="62" y="182" fill="#111110" font-size="30" font-weight="600" letter-spacing="-1">One idea per slide</text>
+        <text x="62" y="182" fill="#111110" font-size="30" font-weight="600" letter-spacing="-1" lang="en">One idea per slide</text>
+        <text x="62" y="182" fill="#111110" font-size="30" font-weight="600" letter-spacing="-1" lang="fr">Une idée par slide</text>
         <rect x="62" y="342" width="150" height="9" rx="2" fill="#111110"/><rect x="62" y="374" width="120" height="9" rx="2" fill="#111110"/>
         <rect x="208.5" y="476.5" width="220" height="42" rx="4" fill="none" stroke="#F2F2EF" stroke-opacity=".2"/>
         <path d="M232 488l-9 10 9 10M404 488l9 10-9 10" fill="none" stroke="#F2F2EF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -550,64 +586,76 @@ kbd{display:inline-block;min-width:1.3em;padding:9px 12px;border:1.5px solid var
         <text x="652" y="322" fill="#8F8F8A" font-size="11" font-weight="500" letter-spacing="1">SPEAKER NOTES</text>
         <rect x="860" y="304" width="30" height="24" rx="3" fill="#2A2A28"/><text x="875" y="320" text-anchor="middle" fill="#F2F2EF" font-size="12" font-weight="500">A−</text>
         <rect x="894" y="304" width="30" height="24" rx="3" fill="#2A2A28"/><text x="909" y="320" text-anchor="middle" fill="#F2F2EF" font-size="12" font-weight="500">A+</text>
-        <text fill="#F2F2EF" font-size="22"><tspan x="652" y="362">Open with the question,</tspan><tspan x="652" dy="32">then wait for a hand</tspan><tspan x="652" dy="32">to go up.</tspan></text>
+        <text fill="#F2F2EF" font-size="22" lang="en"><tspan x="652" y="362">Open with the question,</tspan><tspan x="652" dy="32">then wait for a hand</tspan><tspan x="652" dy="32">to go up.</tspan></text>
+        <text fill="#F2F2EF" font-size="22" lang="fr"><tspan x="652" y="362">Ouvrez sur la question,</tspan><tspan x="652" dy="32">puis attendez qu'une</tspan><tspan x="652" dy="32">main se lève.</tspan></text>
       </svg>
     </div>
   </div>
   <div class="s-notes">
-    <p>Press S to open it. If nothing opens, allow pop-ups for this page. Drag the deck window to the projector and press F there.</p>
+    <p lang="en">Press S to open it. If nothing opens, allow pop-ups for this page. Drag the deck window to the projector and press F there.</p>
+    <p lang="fr">Appuyez sur S pour l'ouvrir. Si rien ne s'ouvre, autorisez les pop-ups pour cette page. Glissez la fenêtre du deck sur le projecteur et appuyez sur F.</p>
   </div>
 </section>
 
 <!-- 14 · keys -->
 <section class="slide">
-  <div class="kicker">02 · Present</div>
-  <h2>The keyboard steers the deck</h2>
+  <div class="kicker"><span lang="en">02 · Present</span><span lang="fr">02 · Présenter</span></div>
+  <h2><span lang="en">The keyboard steers the deck</span><span lang="fr">Le clavier pilote le deck</span></h2>
   <table class="keys">
-    <tr><td><kbd>→</kbd><kbd>Space</kbd></td><td>Next item, then next slide</td></tr>
-    <tr><td><kbd>←</kbd></td><td>Back one item, then previous slide</td></tr>
-    <tr><td><kbd>↓</kbd><kbd>↑</kbd></td><td>Next or previous slide, with every item shown</td></tr>
-    <tr><td><kbd>F</kbd></td><td>Fullscreen</td></tr>
-    <tr><td><kbd>S</kbd><kbd>E</kbd></td><td>Presenter view, edit view</td></tr>
+    <tr><td><kbd>→</kbd><kbd>Space</kbd></td><td><span lang="en">Next item, then next slide</span><span lang="fr">Élément suivant, puis slide suivante</span></td></tr>
+    <tr><td><kbd>←</kbd></td><td><span lang="en">Back one item, then previous slide</span><span lang="fr">Un élément en arrière, puis slide précédente</span></td></tr>
+    <tr><td><kbd>↓</kbd><kbd>↑</kbd></td><td><span lang="en">Next or previous slide, with every item shown</span><span lang="fr">Slide suivante ou précédente, tout affiché</span></td></tr>
+    <tr><td><kbd>F</kbd><kbd>L</kbd></td><td><span lang="en">Fullscreen, language</span><span lang="fr">Plein écran, langue</span></td></tr>
+    <tr><td><kbd>S</kbd><kbd>E</kbd></td><td><span lang="en">Presenter view, edit view</span><span lang="fr">Vue présentateur, vue d'édition</span></td></tr>
   </table>
-  <p class="small" style="margin:28px 0 0">Move the pointer to the bottom-left corner for buttons and the full list.</p>
+  <p class="small" style="margin:28px 0 0" lang="en">Move the pointer to the bottom-left corner for buttons and the full list.</p>
+  <p class="small" style="margin:28px 0 0" lang="fr">Approchez le pointeur du coin en bas à gauche pour les boutons et la liste complète.</p>
   <div class="s-notes">
-    <p>Clicking also works: the left 30 % of the screen goes back and the rest goes forward. On a touch screen, swipe.</p>
+    <p lang="en">Clicking also works: the left 30 % of the screen goes back and the rest goes forward. On a touch screen, swipe.</p>
+    <p lang="fr">Le clic marche aussi : les 30 % de gauche de l'écran reculent, le reste avance. Sur un écran tactile, balayez.</p>
   </div>
 </section>
 
 <!-- 15 · print -->
 <section class="slide">
-  <div class="kicker">02 · Present</div>
-  <h2>P prints the deck to PDF</h2>
-  <p class="sub">Press <kbd>P</kbd> and choose Save as PDF in the print dialog.</p>
+  <div class="kicker"><span lang="en">02 · Present</span><span lang="fr">02 · Présenter</span></div>
+  <h2><span lang="en">P prints the deck to PDF</span><span lang="fr">P imprime le deck en PDF</span></h2>
+  <p class="sub" lang="en">Press <kbd>P</kbd> and choose Save as PDF in the print dialog.</p>
+  <p class="sub" lang="fr">Appuyez sur <kbd>P</kbd> et choisissez Enregistrer en PDF dans la fenêtre d'impression.</p>
   <ul>
-    <li>One page per slide, at 1920 × 1080</li>
-    <li>Every build shown</li>
-    <li>Speaker notes left out</li>
+    <li lang="en">One page per slide, at 1920 × 1080</li>
+    <li lang="fr">Une page par slide, en 1920 × 1080</li>
+    <li lang="en">Every build shown</li>
+    <li lang="fr">Tous les builds affichés</li>
+    <li lang="en">Speaker notes left out</li>
+    <li lang="fr">Sans les notes</li>
   </ul>
   <div class="s-notes">
-    <p>The PDF is the hand-out. Backgrounds print as they show, so a dark slide stays dark.</p>
+    <p lang="en">The PDF is the hand-out. Backgrounds print as they show, so a dark slide stays dark.</p>
+    <p lang="fr">Le PDF est le support à distribuer. Les fonds s'impriment tels quels : une slide sombre reste sombre.</p>
   </div>
 </section>
 
 <!-- 16 · section divider -->
 <section class="slide dark divider">
   <div class="kicker">03</div>
-  <h1>Change</h1>
+  <h1><span lang="en">Change</span><span lang="fr">Modifier</span></h1>
   <div class="s-notes">
-    <p>How a deck changes after it is written: edits in the browser, suggestions for a coding agent, and updates to the engine.</p>
+    <p lang="en">How a deck changes after it is written: edits in the browser, suggestions for a coding agent, and updates to the engine.</p>
+    <p lang="fr">Comment un deck évolue une fois écrit : des modifications dans le navigateur, des suggestions pour un agent de code, et les mises à jour du moteur.</p>
   </div>
 </section>
 
 <!-- 17 · edit view -->
 <section class="slide">
-  <div class="kicker">03 · Change</div>
-  <h2>E opens the edit view</h2>
+  <div class="kicker"><span lang="en">03 · Change</span><span lang="fr">03 · Modifier</span></div>
+  <h2><span lang="en">E opens the edit view</span><span lang="fr">E ouvre la vue d'édition</span></h2>
   <div class="cols" style="grid-template-columns:1fr 1.6fr;align-items:end">
     <div>
-      <p>In Edit, double-click text to change it, or click an element to move, copy or delete it. Save writes the file.</p>
-      <p>In Suggest, click an element and type what should change, for a coding agent.</p>
+      <p lang="en">In Edit, double-click text to change it, or click an element to move, copy or delete it. Save writes the file.</p>
+      <p lang="fr">En Edit, double-cliquez un texte pour le changer, ou cliquez un élément pour le déplacer, le copier ou le supprimer. Save écrit le fichier.</p>
+      <p lang="en">In Suggest, click an element and type what should change, for a coding agent.</p>
+      <p lang="fr">En Suggest, cliquez un élément et tapez ce qu'il faut changer, pour un agent de code.</p>
     </div>
     <div class="window">
       <svg viewBox="0 0 960 600" role="img" aria-label="Drawing of the edit view in Suggest: thumbnails on the left, a slide with one element outlined in orange and a suggestion box beside it, speaker notes below, suggestions on the right with Copy prompt below them, and the buttons for the open suggestion in the toolbar">
@@ -627,14 +675,18 @@ kbd{display:inline-block;min-width:1.3em;padding:9px 12px;border:1.5px solid var
         <rect x="16" y="252" width="88" height="50" rx="2" fill="#0C0C0B"/><rect x="24" y="284" width="28" height="8" rx="1" fill="#F7F6F2"/>
         <rect x="16.5" y="316.5" width="87" height="49" rx="2" fill="#F7F6F2" stroke="#D6D6D2"/><rect x="24" y="328" width="46" height="6" rx="1" fill="#B9B8B2"/>
         <rect x="142.5" y="66.5" width="559" height="314" fill="#F7F6F2" stroke="#CFCFCB"/>
-        <text x="178" y="98" fill="#C2310A" font-size="9" font-weight="500" letter-spacing="1">01 · WRITE</text>
+        <text x="178" y="98" fill="#C2310A" font-size="9" font-weight="500" letter-spacing="1" lang="en">01 · WRITE</text>
+        <text x="178" y="98" fill="#C2310A" font-size="9" font-weight="500" letter-spacing="1" lang="fr">01 · ÉCRIRE</text>
         <path d="M178 108.5h488" stroke="#111110" stroke-opacity=".16"/>
-        <text x="184" y="170" fill="#111110" font-size="30" font-weight="600" letter-spacing="-1">A heading that says the point</text>
+        <text x="184" y="170" fill="#111110" font-size="30" font-weight="600" letter-spacing="-1" lang="en">A heading that says the point</text>
+        <text x="184" y="170" fill="#111110" font-size="30" font-weight="600" letter-spacing="-1" lang="fr">Un titre qui dit l'essentiel</text>
         <rect x="178" y="140" width="488" height="42" rx="2" fill="none" stroke="#FF9500" stroke-width="2.5"/>
         <path d="M178 119h26a2 2 0 0 1 2 2v19h-28z" fill="#007AFF"/><text x="192" y="134" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">01</text>
         <rect x="186.5" y="194.5" width="360" height="104" rx="4" fill="#fff" stroke="#C9C9C5"/>
-        <text x="202" y="220" fill="#6B6B66" font-size="13">Slide 8 › h2 "A heading that says…"</text>
-        <text x="202" y="248" fill="#111110" font-size="16">Make this one line shorter</text>
+        <text x="202" y="220" fill="#6B6B66" font-size="13" lang="en">Slide 8 › h2 "A heading that says…"</text>
+        <text x="202" y="220" fill="#6B6B66" font-size="13" lang="fr">Slide 8 › h2 "Un titre qui dit…"</text>
+        <text x="202" y="248" fill="#111110" font-size="16" lang="en">Make this one line shorter</text>
+        <text x="202" y="248" fill="#111110" font-size="16" lang="fr">Raccourcir cette ligne</text>
         <path transform="translate(474 266)" d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4" stroke="#6B6B66" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
         <rect x="506" y="260" width="28" height="28" rx="3" fill="#111110"/><path d="M520 281v-14m-6 6 6-6 6 6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         <rect x="119" y="412" width="607" height="158" fill="#fff"/><path d="M119 412.5h607" stroke="#D6D6D2"/>
@@ -642,9 +694,11 @@ kbd{display:inline-block;min-width:1.3em;padding:9px 12px;border:1.5px solid var
         <rect x="142" y="458" width="380" height="8" rx="2" fill="#C9C9C5"/><rect x="142" y="478" width="280" height="8" rx="2" fill="#C9C9C5"/>
         <rect x="726" y="45" width="234" height="525" fill="#FAFAF8"/><path d="M726.5 45v525M726 88.5h234" stroke="#D6D6D2"/>
         <text x="744" y="72" fill="#111110" font-size="11" font-weight="500" letter-spacing="1">SUGGESTIONS</text>
-        <text x="744" y="116" fill="#6B6B66" font-size="12" font-weight="600">Slide 8 · A heading…</text>
+        <text x="744" y="116" fill="#6B6B66" font-size="12" font-weight="600" lang="en">Slide 8 · A heading…</text>
+        <text x="744" y="116" fill="#6B6B66" font-size="12" font-weight="600" lang="fr">Slide 8 · Un titre…</text>
         <text x="744" y="142" fill="#007AFF" font-size="11" font-weight="600">01</text>
-        <text fill="#111110" font-size="14"><tspan x="768" y="142">Make this one line</tspan><tspan x="768" dy="19">shorter</tspan></text>
+        <text fill="#111110" font-size="14" lang="en"><tspan x="768" y="142">Make this one line</tspan><tspan x="768" dy="19">shorter</tspan></text>
+        <text fill="#111110" font-size="14" lang="fr"><tspan x="768" y="142">Raccourcir cette</tspan><tspan x="768" dy="19">ligne</tspan></text>
         <path d="M726 520.5h234" stroke="#D6D6D2"/>
         <rect x="744" y="530" width="108" height="26" rx="3" fill="#111110"/><text x="798" y="548" text-anchor="middle" fill="#fff" font-size="13" font-weight="500">Copy prompt</text>
         <path transform="translate(884 535)" d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4" stroke="#111110" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><text x="906" y="548" fill="#111110" font-size="13">Clear</text>
@@ -657,54 +711,63 @@ kbd{display:inline-block;min-width:1.3em;padding:9px 12px;border:1.5px solid var
     </div>
   </div>
   <div class="s-notes">
-    <p>Press E to try it on this slide. Changes stay in this window until you save them; suggestions are kept in this browser, per deck. Press E again to come back.</p>
+    <p lang="en">Press E to try it on this slide. Changes stay in this window until you save them; suggestions are kept in this browser, per deck. Press E again to come back.</p>
+    <p lang="fr">Appuyez sur E pour l'essayer sur cette slide. Les modifications restent dans cette fenêtre jusqu'à l'enregistrement ; les suggestions sont gardées dans ce navigateur, par deck. Appuyez de nouveau sur E pour revenir.</p>
   </div>
 </section>
 
 <!-- 18 · the prompt it writes -->
 <section class="slide">
-  <div class="kicker">03 · Change</div>
-  <h2>Copy prompt collects every suggestion</h2>
-  <p class="sub">Paste it into Claude Code or another coding agent. It names the file, the slide and the element.</p>
-  <div class="term">## 1. Slide 8: Speaker notes live inside the slide
+  <div class="kicker"><span lang="en">03 · Change</span><span lang="fr">03 · Modifier</span></div>
+  <h2><span lang="en">Copy prompt collects every suggestion</span><span lang="fr">Copy prompt rassemble les suggestions</span></h2>
+  <p class="sub" lang="en">Paste it into Claude Code or another coding agent. It names the file, the slide and the element.</p>
+  <p class="sub" lang="fr">Collez-le dans Claude Code ou un autre agent de code. Il nomme le fichier, la slide et l'élément.</p>
+  <div class="term">## 1. Slide 8: <span lang="en">Speaker notes live inside the slide</span><span lang="fr">Les notes sont dans la slide</span>
 
-On `h2` "Speaker notes live inside the slide"
+On `span` "<span lang="en">Speaker notes live inside the slide</span><span lang="fr">Les notes sont dans la slide</span>"
 
-Element: `#stage &gt; section:nth-child(8) &gt; h2:nth-child(2)`
+Element: `#stage &gt; section:nth-child(8) &gt; h2:nth-child(2) &gt; span:nth-child(<span lang="en">1</span><span lang="fr">2</span>)`
 
-Suggestion: <span class="w">Make this heading shorter</span></div>
+Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><span lang="fr">Raccourcir ce titre</span></span></div>
   <div class="s-notes">
-    <p>This is one suggestion from a prompt, which starts by naming the deck file. The selector and the text tell the agent where to look.</p>
+    <p lang="en">This is one suggestion from a prompt, which starts by naming the deck file. The selector and the text tell the agent where to look.</p>
+    <p lang="fr">Voici une suggestion d'un prompt, qui commence par nommer le fichier du deck. Le sélecteur et le texte disent à l'agent où regarder.</p>
   </div>
 </section>
 
 <!-- 19 · updating -->
 <section class="slide">
-  <div class="kicker">03 · Change</div>
-  <h2>Updating replaces only the engine</h2>
-  <p class="sub">Your slides and theme stay as they are.</p>
+  <div class="kicker"><span lang="en">03 · Change</span><span lang="fr">03 · Modifier</span></div>
+  <h2><span lang="en">Updating replaces only the engine</span><span lang="fr">La mise à jour ne remplace que le moteur</span></h2>
+  <p class="sub" lang="en">Your slides and theme stay as they are.</p>
+  <p class="sub" lang="fr">Vos slides et votre thème restent tels quels.</p>
   <div class="term"><span class="b">$</span> <span class="w">npx github:roaldnefs/deckfile update my-talk/index.html</span>
 <span class="d">my-talk/index.html: updated</span>
 
 <span class="b">$</span> <span class="w">npx github:roaldnefs/deckfile update --check my-talk/index.html</span>
 <span class="d">my-talk/index.html: up to date</span></div>
   <div class="s-notes">
-    <p>With --check, nothing is written, and the command exits 1 if the deck is out of date.</p>
+    <p lang="en">With --check, nothing is written, and the command exits 1 if the deck is out of date.</p>
+    <p lang="fr">Avec --check, rien n'est écrit, et la commande sort en 1 si le deck n'est pas à jour.</p>
   </div>
 </section>
 
 <!-- 20 · closing -->
 <section class="slide dark closing">
-  <div class="kicker">Start</div>
-  <h1>Start from template.html</h1>
+  <div class="kicker"><span lang="en">Start</span><span lang="fr">Démarrer</span></div>
+  <h1><span lang="en">Start from template.html</span><span lang="fr">Partez de template.html</span></h1>
   <ol class="agenda" style="margin-bottom:56px">
-    <li>Copy it to my-talk/index.html</li>
-    <li>Replace the slides with your own</li>
-    <li>Open it in a browser</li>
+    <li lang="en">Copy it to my-talk/index.html</li>
+    <li lang="fr">Copiez-le dans my-talk/index.html</li>
+    <li lang="en">Replace the slides with your own</li>
+    <li lang="fr">Remplacez les slides par les vôtres</li>
+    <li lang="en">Open it in a browser</li>
+    <li lang="fr">Ouvrez-le dans un navigateur</li>
   </ol>
-  <a class="btn action" href="https://github.com/roaldnefs/deckfile">deckfile on GitHub</a>
+  <a class="btn action" href="https://github.com/roaldnefs/deckfile"><span lang="en">deckfile on GitHub</span><span lang="fr">deckfile sur GitHub</span></a>
   <div class="s-notes">
-    <p>deckfile is MIT licensed, by Roald Nefs. Delete these slides from your copy and keep the rest of the file.</p>
+    <p lang="en">deckfile is MIT licensed, by Roald Nefs. Delete these slides from your copy and keep the rest of the file.</p>
+    <p lang="fr">deckfile est sous licence MIT, par Roald Nefs. Supprimez ces slides dans votre copie et gardez le reste du fichier.</p>
   </div>
 </section>
 
@@ -771,7 +834,21 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
     set: (key, v) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch {} }
   };
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-  const builds = s => [...s.querySelectorAll('.build')];
+  // a slide's builds, one per step: the versions of a text in other languages reveal with it, as one step (see versionsAround)
+  const steps = s => {
+    const all = [...s.querySelectorAll('.build')], done = new Set(), out = [];
+    for (const b of all) {
+      if (done.has(b)) continue;
+      const step = versioned(b) ? versionsAround(b).filter(x => x.classList.contains('build')) : [b];
+      step.forEach(x => done.add(x));
+      out.push(step);
+    }
+    return out;
+  };
+  // a step is on when its first element is; turning one on or off turns all its versions
+  const stepOn = st => st[0].classList.contains('on');
+  const setStep = (st, on) => st.forEach(x => x.classList.toggle('on', on));
+  const builds = s => steps(s);
   const skips = s => s?.dataset.skip !== undefined;
   const shown = () => slides.filter(s => !skips(s));
   let i = Math.min(+store.get() || 0, slides.length - 1);
@@ -912,7 +989,7 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
     det = k;
     slides.forEach((s, x) => s.classList.toggle('current', x === i));
     drawDetails();
-    builds(slides[i]).forEach(b => b.classList.toggle('on', built));
+    builds(slides[i]).forEach(st => setStep(st, built));
     if (mode === 'deck') store.set(i);
     drawNotes();
     if (mode === 'deck' && !built && slides[i].dataset.auto !== undefined) autoBuild(+slides[i].dataset.auto || 500);
@@ -921,9 +998,9 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
   }
   function autoBuild(delay) {
     const step = () => {
-      const b = builds(slides[i]).find(x => !x.classList.contains('on'));
+      const b = builds(slides[i]).find(st => !stepOn(st));
       if (!b) return;
-      b.classList.add('on');
+      setStep(b, true);
       sync();
       autoTimer = setTimeout(step, delay);
     };
@@ -946,26 +1023,26 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
       drawDetails();
       drawNotes();
     }
-    const b = builds(slides[i]).find(x => !x.classList.contains('on'));
-    b ? b.classList.add('on') : show(seek(i + 1, 1));
+    const b = builds(slides[i]).find(st => !stepOn(st));
+    b ? setStep(b, true) : show(seek(i + 1, 1));
     sync();
   }
   function prev() {
     clearTimeout(autoTimer);
     if (det >= 0) return setDetail(-1);
-    const on = builds(slides[i]).filter(x => x.classList.contains('on'));
-    on.length ? on.pop().classList.remove('on') : show(seek(i - 1, -1), true);
+    const on = builds(slides[i]).filter(stepOn);
+    on.length ? setStep(on.pop(), false) : show(seek(i - 1, -1), true);
     sync();
   }
   // show slide n with its first k builds on, or all of them when k < 0, and its d-th detail open (presenter and view windows)
   function apply(n, k, d = -1) {
     show(n, k < 0, d);
-    builds(slides[i]).slice(0, Math.max(k, 0)).forEach(b => b.classList.add('on'));
+    builds(slides[i]).slice(0, Math.max(k, 0)).forEach(st => setStep(st, true));
   }
   // deck: tell an open presenter window where we are, slide i with k builds on and detail d open
   function sync() {
     if (mode !== 'deck' || !presenterWin || presenterWin.closed) return;
-    const k = builds(slides[i]).filter(b => b.classList.contains('on')).length;
+    const k = builds(slides[i]).filter(stepOn).length;
     presenterWin.postMessage({ deck: 'state', i, k, d: det, lang: cur }, '*');
   }
   // presenter: mirror the deck's state into the current and next panes, notes and labels

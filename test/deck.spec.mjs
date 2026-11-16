@@ -3872,6 +3872,34 @@ test.describe('languages', () => {
     expect(await seen(page)).toBe('Second Un Only English Plain 2 / 2');
   });
 
+  test('a build in two languages is one press, in either language', async ({ page }) => {
+    await openBilingual(page, `<section class="slide">
+  <h2>Builds</h2>
+  <ul>
+    <li class="build" lang="en">One</li>
+    <li class="build" lang="fr">Un</li>
+    <li class="build" lang="en">Two</li>
+    <li class="build" lang="fr">Deux</li>
+  </ul>
+</section>
+
+<section class="slide">
+  <h2>After</h2>
+</section>`);
+    const on = () => page.locator(`${CUR} .build.on:visible`).allTextContents();
+    await page.keyboard.press('ArrowRight');
+    expect(await on()).toEqual(['One']);
+    await page.keyboard.press('ArrowRight');
+    expect(await on()).toEqual(['One', 'Two']);
+    await page.keyboard.press('l');
+    expect(await on()).toEqual(['Un', 'Deux']);
+    await page.keyboard.press('ArrowLeft');
+    expect(await on()).toEqual(['Un']);
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    expect(await current(page)).toBe(1);
+  });
+
   test('the notes, the presenter view and its panes follow the language; L there switches the deck', async ({ page }) => {
     await openBilingual(page);
     await page.keyboard.press('l');
