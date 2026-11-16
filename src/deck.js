@@ -20,6 +20,11 @@
     data-detail="id" on any element     a click opens <aside class="detail" id="id"> of the same slide; Esc, ← or a click
                                         outside closes it, → closes it and goes on. Print gives each detail a page after its slide
     data-public on the stage           a public copy made in the edit view, to hand out: it has no edit view
+  Languages: data-langs="en fr" on <html> lists the languages of the deck, the first one shown unless another was chosen.
+    lang="fr" on any element in a slide or in the notes   shown only in French; elements side by side, one per language,
+                                        are versions of the same text. Text without lang shows in every language.
+    data-set-lang="fr" on a button      a click shows the deck in French; L switches language too
+    data-fr="…" on <title>              the title of the page in French
   The engine sets .current on the slide shown, .on on each build revealed and .open on the detail shown, and adds a
   <span class="counter"> to every slide and a <button class="detail-close"> to every detail.
   URL: ?print opens the print dialog once loaded; ?presenter is the presenter window; ?view is one read-only slide, used
@@ -27,6 +32,7 @@
   The README describes the presenter and edit views.
 */
 (() => {
+  const local0 = key => { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } };
   const slides = [...document.querySelectorAll('.slide')];
   // made here, placed by the presenter and edit views
   const notes = Object.assign(document.body.appendChild(document.createElement('div')), { id: 'notes', hidden: true });
@@ -37,6 +43,10 @@
   const canEdit = mode === 'deck' && !document.querySelector('#stage[data-public]');  // a public copy has no edit view
   const here = location.href.split(/[?#]/)[0];
   const KEY = 'deck:' + location.pathname;
+  // the languages of the deck, and the one shown: from ?lang=, or as chosen last in this browser, or else the first
+  const root = document.documentElement, langs = (root.dataset.langs || '').split(/\s+/).filter(Boolean);
+  const LANG_KEY = KEY + ':lang', ownLang = root.getAttribute('lang'), titleEl = document.querySelector('title'), ownTitle = titleEl?.textContent;
+  let cur = [params.get('lang'), local0(LANG_KEY), langs[0]].find(l => langs.includes(l));
   const EDIT_KEY = KEY + ':edit';
   const MODE_KEY = KEY + ':mode';
   const store = {
@@ -73,6 +83,65 @@
     : [...owner.querySelectorAll('.s-notes')].find(n => !n.closest('.detail'));
   const openDetail = () => det < 0 ? null : details(slides[i])[det];
 
+  // Languages. An element with a language of the deck is one version of a text; the versions of one text are the elements
+  // side by side, with only white space or comments between them, that each have a language of the deck. Each shows only in
+  // its language. A text without a version in the language shown shows in the first language, or else in the one it has,
+  // marked data-lang-missing for the edit view, so that the show has no holes. Slides themselves are not switched
+  const versioned = el => langs.length > 1 && el?.nodeType === Node.ELEMENT_NODE && langs.includes(el.getAttribute('lang')) && !el.matches('.slide, #stage');
+  const langOf = el => el.getAttribute('lang');
+  const blank = n => n && (n.nodeType === Node.COMMENT_NODE || (n.nodeType === Node.TEXT_NODE && !n.data.trim()));
+  // A run of such elements splits where a language comes back: en fr en is one text in two languages, then one in English
+  function versionsAround(el) {
+    const near = (n, step) => { do n = step < 0 ? n.previousSibling : n.nextSibling; while (blank(n)); return n; };
+    let first = el;
+    for (let n = near(first, -1); versioned(n); n = near(n, -1)) first = n;
+    const groups = [[first]];
+    for (let n = near(first, 1); versioned(n); n = near(n, 1)) {
+      if (groups.at(-1).some(x => langOf(x) === langOf(n))) groups.push([]);
+      groups.at(-1).push(n);
+    }
+    return groups.find(g => g.includes(el));
+  }
+  function markLang(within) {
+    within.querySelectorAll('[data-lang-off], [data-lang-missing]').forEach(x => { x.removeAttribute('data-lang-off'); x.removeAttribute('data-lang-missing'); });
+    if (langs.length < 2) return;
+    const seen = new Set();
+    within.querySelectorAll('[lang]').forEach(el => {
+      if (seen.has(el) || !versioned(el)) return;
+      const run = versionsAround(el), has = l => run.some(x => langOf(x) === l);
+      const showing = has(cur) ? cur : has(langs[0]) ? langs[0] : langOf(run[0]);
+      run.forEach(x => {
+        seen.add(x);
+        if (langOf(x) !== showing) x.setAttribute('data-lang-off', '');
+        else if (showing !== cur) x.setAttribute('data-lang-missing', '');
+      });
+    });
+  }
+  // the page in the language shown: its versions, its title, its lang, and the buttons that choose it
+  function drawLang() {
+    if (langs.length < 2) return;
+    root.lang = cur;
+    const title = titleEl?.dataset[cur] ?? ownTitle;
+    if (titleEl) document.title = (root.classList.contains('presenter') ? 'Presenter: ' : '') + title;
+    markLang(document.body);
+    document.querySelectorAll('[data-set-lang]').forEach(b => b.setAttribute('aria-pressed', b.dataset.setLang === cur));
+  }
+  // show the deck in language l; the deck window remembers it, and the presenter view and the thumbnails follow
+  function setLang(l) {
+    if (!langs.includes(l) || l === cur) return;
+    cur = l;
+    if (mode === 'deck') local.set(LANG_KEY, l);
+    drawLang();
+    drawNotes();
+    if (editing) {
+      drawEdit();
+      slides.forEach((s, n) => sendThumb(n));
+    }
+    sync();
+  }
+  const nextLang = () => langs[(langs.indexOf(cur) + 1) % langs.length];
+  drawLang();
+
   // the slide number, in a <span class="counter"> the engine appends to every slide; skipped slides have none and are not counted
   function renumber() {
     const all = shown();
@@ -88,6 +157,7 @@
     const shown = openDetail(), own = notesOf(shown || slides[i]);
     notes.innerHTML = own?.innerHTML || (!editing && shown && notesOf(slides[i])?.innerHTML) ||
       `<em>No notes for this ${shown ? 'detail' : 'slide'}.</em>`;
+    markLang(notes);
   }
   // mark the open detail and the elements that open it; each detail gets its close button, left out of the file on save
   // An opener has aria-expanded only while its detail is there to open: not for a missing or skipped detail, which it
@@ -183,7 +253,7 @@
   function sync() {
     if (mode !== 'deck' || !presenterWin || presenterWin.closed) return;
     const k = builds(slides[i]).filter(b => b.classList.contains('on')).length;
-    presenterWin.postMessage({ deck: 'state', i, k, d: det }, '*');
+    presenterWin.postMessage({ deck: 'state', i, k, d: det, lang: cur }, '*');
   }
   // presenter: mirror the deck's state into the current and next panes, notes and labels
   function render(n, k, d = -1) {
@@ -195,9 +265,9 @@
     // otherwise the next slide as it first appears (data-auto slides fully built, since that is where they end up)
     const nextBuild = left > 0 && slides[i].dataset.auto === undefined;
     const after = seek(i + 1, 1), all = shown();
-    pv.cur.contentWindow.postMessage({ deck: 'view', i, k, d }, '*');
-    pv.next.contentWindow.postMessage(nextBuild ? { deck: 'view', i, k: k + 1 }
-      : { deck: 'view', i: after, k: slides[after].dataset.auto !== undefined ? -1 : 0 }, '*');
+    pv.cur.contentWindow.postMessage({ deck: 'view', i, k, d, lang: cur }, '*');
+    pv.next.contentWindow.postMessage(nextBuild ? { deck: 'view', i, k: k + 1, lang: cur }
+      : { deck: 'view', i: after, k: slides[after].dataset.auto !== undefined ? -1 : 0, lang: cur }, '*');
     pv.label.textContent = nextBuild ? 'Next build' : 'Next slide';
     pv.end.hidden = nextBuild || after !== i;
     pv.count.textContent = skips(slides[i]) ? 'Skipped slide' : `Slide ${all.indexOf(slides[i]) + 1} of ${all.length}`;
@@ -220,7 +290,7 @@
     help: 'M8 14.5a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13zM6.2 6.2a1.9 1.9 0 1 1 2.8 1.7c-.6.3-1 .8-1 1.4M8 11.6v.1',
     bubble: 'M3 2.5h10A1.5 1.5 0 0 1 14.5 4v6a1.5 1.5 0 0 1-1.5 1.5H8L4.5 14v-2.5H3A1.5 1.5 0 0 1 1.5 10V4A1.5 1.5 0 0 1 3 2.5z',
     save: 'M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11', down: 'M8 3v10M3.5 8.5 8 13l4.5-4.5', check: 'M3 8.5 6.5 12 13 4.5',
-    plus: 'M8 3v10M3 8h10', detail: 'M2.5 3h11a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM8.5 3v10M10.5 6h2M10.5 8.5h2', saveAs: 'M6.5 3v7M3.5 7l3 3 3-3M2.5 13.5h11M12.5 2v4M10.5 4h4', chevron: 'M4.5 6.5 8 10l3.5-3.5', skip: 'M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM3 2.5l10 11'
+    plus: 'M8 3v10M3 8h10', lang: 'M8 14.5a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13zM1.5 8h13M8 1.5c-1.9 1.8-2.8 4-2.8 6.5s.9 4.7 2.8 6.5c1.9-1.8 2.8-4 2.8-6.5S9.9 3.3 8 1.5z', detail: 'M2.5 3h11a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM8.5 3v10M10.5 6h2M10.5 8.5h2', saveAs: 'M6.5 3v7M3.5 7l3 3 3-3M2.5 13.5h11M12.5 2v4M10.5 4h4', chevron: 'M4.5 6.5 8 10l3.5-3.5', skip: 'M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM3 2.5l10 11'
   };
   const icon = (name, size = 16) => `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" stroke="currentColor" ` +
     `stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICONS[name]}"/></svg>`;
@@ -244,7 +314,7 @@
     tick();
   }
 
-  const NAV = ['ArrowRight', ' ', 'PageDown', 'ArrowLeft', 'PageUp', 'ArrowDown', 'ArrowUp', 'Home', 'End', 'Escape'];
+  const NAV = ['ArrowRight', ' ', 'PageDown', 'ArrowLeft', 'PageUp', 'ArrowDown', 'ArrowUp', 'Home', 'End', 'Escape', 'l', 'L'];
   function act(key) {
     // the presenter window steers the deck window, which answers with its new state
     if (mode === 'presenter' && NAV.includes(key)) {
@@ -267,6 +337,10 @@
         document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
         break;
       case 'p': case 'P': print(); break;
+      case 'l': case 'L':
+        if (langs.length < 2) return false;
+        setLang(nextLang());
+        break;
       case 's': case 'S':
         if (mode === 'deck') presenterWin = open(here + '?presenter', 'deck-presenter', 'popup,width=1280,height=800');
         break;
@@ -316,7 +390,12 @@
       pv.seen = Date.now();
       pv.link.hidden = true;
       // the heartbeat repeats the state every 2 s; only redraw when it changed
-      if (!pv.last || pv.last[0] !== m.i || pv.last[1] !== m.k || pv.last[2] !== (m.d ?? -1)) render(m.i, m.k, m.d ?? -1);
+      const langWas = cur;
+      if (m.lang && langs.includes(m.lang) && m.lang !== cur) {
+        cur = m.lang;
+        drawLang();
+      }
+      if (!pv.last || pv.last[0] !== m.i || pv.last[1] !== m.k || pv.last[2] !== (m.d ?? -1) || langWas !== cur) render(m.i, m.k, m.d ?? -1);
     } else if (mode === 'view' && m.deck === 'view' && e.source === parent) {
       // the edit view sends a thumbnail the current HTML of its slide; only accepted from this deck's own origin
       if (m.html !== undefined && e.origin === self.origin) {
@@ -326,6 +405,8 @@
         slides[m.i].replaceWith(slide);
         slides[m.i] = slide;
       }
+      if (m.lang && langs.includes(m.lang)) cur = m.lang;
+      drawLang();
       apply(m.i, m.k, m.d ?? -1);
     }
   });
@@ -337,6 +418,8 @@
   let swiped = false, tx = 0, ty = 0;
   stage.addEventListener('click', e => {
     if (swiped || editing) return;
+    const chooser = e.target.closest('[data-set-lang]');
+    if (chooser) return setLang(chooser.dataset.setLang);
     const opener = e.target.closest('[data-detail]'), k = opener ? details(slides[i]).findIndex(x => x.id === opener.dataset.detail && !skips(x)) : -1;
     if (k >= 0) return setDetail(k);
     if (det >= 0) {
@@ -364,11 +447,12 @@
       `<button type="button" class="${cls}" tabindex="-1" aria-label="${label}" title="${title}">${icon(name)}</button>`;
     const KEYS = [['→ Space PgDn', 'Next'], ['← PgUp', 'Previous'], ['↓ ↑', 'Whole slide forward / back'], ['Home End', 'First / last slide'],
       ['F', 'Fullscreen'], ['P', 'Print to PDF'],
-      ['S', 'Presenter view'], ...canEdit ? [['E', 'Edit view']] : [], ['Esc', 'Close']];
+      ['S', 'Presenter view'], ...canEdit ? [['E', 'Edit view']] : [], ...langs.length > 1 ? [['L', 'Language']] : [], ['Esc', 'Close']];
     box.innerHTML = '<div id="deck-help" hidden>' + KEYS.map(([keys, what]) =>
       `<div class="c-keys">${keys.split(' ').map(k => `<span>${k}</span>`).join('')}</div><div>${what}</div>`).join('') + '</div>' +
       button('c-back', 'Back', 'Back (←)', 'back') + button('c-present', 'Presenter view', 'Presenter view (S)', 'display') +
-      (canEdit ? button('c-edit', 'Edit view', 'Edit view (E)', 'pencil') : '') + button('c-help', 'Keyboard shortcuts', 'Keyboard shortcuts', 'help') +
+      (canEdit ? button('c-edit', 'Edit view', 'Edit view (E)', 'pencil') : '') +
+      (langs.length > 1 ? button('c-lang', 'Language', 'Language (L)', 'lang') : '') + button('c-help', 'Keyboard shortcuts', 'Keyboard shortcuts', 'help') +
       button('c-fwd', 'Forward', 'Forward (→)', 'forward');
     const help = box.firstChild, helpButton = box.querySelector('.c-help');
     // the shortcuts stay up, with the buttons, until dismissed
@@ -384,6 +468,7 @@
     box.querySelector('.c-edit')?.addEventListener('click', () => { showHelp(false); act('e'); });
     box.querySelector('.c-fwd').addEventListener('click', () => act('ArrowRight'));
     box.querySelector('.c-present').addEventListener('click', () => { showHelp(false); act('s'); });
+    box.querySelector('.c-lang')?.addEventListener('click', () => act('l'));
     // a click elsewhere only dismisses them: seen first, so the slide does not advance as well
     addEventListener('click', e => {
       if (help.hidden || box.contains(e.target)) return;
@@ -622,6 +707,10 @@
         html.editing #stage{left:var(--edit-x);top:var(--edit-y);box-shadow:0 0 0 calc(1px / var(--scale)) rgba(0,0,0,.16)}
         /* nothing moves here: outlines are measured from what is on the slide */
         html.editing :is(.build,.detail){transition:none}
+        /* a text shown in another language, for want of one in the language shown */
+        html.editing #stage [data-lang-missing]{opacity:.45;outline:calc(1.5px / var(--scale)) dashed #FF9500;outline-offset:calc(3px / var(--scale))}
+        .e-missing{margin-left:12px;color:#C93400}
+        #edit-bar .e-lang{margin-left:4px;font-variant-numeric:tabular-nums}
         html.editing .slide,html.editing .slide *{animation:none!important}
         html.editing #edit-layer{display:block;position:absolute;inset:0;z-index:2147483647;cursor:default;touch-action:none}
         /* marks sit in the scaled slide; dividing by --scale keeps their lines and numbers one size on screen.
@@ -799,6 +888,7 @@
       '<div class="e-slide-tools"><span class="e-tools-label">Slide</span>' + tool('e-do-add', 'New slide', 'plus') +
       tool('e-do-copy-slide', 'Duplicate slide', 'copy') + tool('e-do-skip-slide', 'Skip slide', 'skip') +
       tool('e-do-drop-slide', 'Delete slide', 'trash') + '</div>' +
+      (langs.length > 1 ? labelled('e-lang', '', 'lang', 'The language shown and edited; a click shows the next one (L)') : '') +
       '<div class="e-mode">' + labelled('e-mode-edit', 'Edit', 'pencil', 'A click on the slide selects, a double-click types') +
       labelled('e-mode-suggest', 'Suggest', 'bubble', 'A click on the slide suggests a change') + '</div>' +
       tool('e-do-undo', 'Undo', 'reset') +
@@ -809,7 +899,7 @@
     rail.id = 'edit-rail';
     const status = document.createElement('div');
     status.id = 'edit-status';
-    status.innerHTML = `<span class="e-where"></span><span class="e-skipped" hidden>${icon('skip', 12)}Skipped: not in the show</span><div class="e-status-buttons">` +
+    status.innerHTML = `<span class="e-where"></span><span class="e-missing" hidden></span><span class="e-skipped" hidden>${icon('skip', 12)}Skipped: not in the show</span><div class="e-status-buttons">` +
       `<button type="button" class="e-toggle-rail" aria-label="Thumbnails" aria-pressed="true" title="Show or hide the thumbnails">${icon('paneLeft')}</button>` +
       `<button type="button" class="e-notes" aria-label="Notes" title="Show or hide the notes">${icon('notes')}</button>` +
       `<button type="button" class="e-toggle-pane" aria-label="Side pane" aria-pressed="true" title="Show or hide the unsaved edits or suggestions">${icon('paneRight')}</button></div>`;
@@ -834,7 +924,7 @@
     const layouts = deckLayouts(), menu = layoutMenu(layouts);
     const $ = s => panel.querySelector(s);
     ed = { layer, menu, copyBox, marks: layer.firstChild, draft: layer.children[1], hover: layer.lastChild, list: $('.e-list'), empty: $('.e-empty'), copy: $('.e-copy'),
-      clear: $('.e-clear'), undoSuggestions: $('.e-undo'), rail, thumbs: [], dragged: null, where: status.firstChild, skipped: status.children[1], ask, ta: ask.querySelector('textarea'), path: ask.firstChild,
+      clear: $('.e-clear'), undoSuggestions: $('.e-undo'), rail, thumbs: [], dragged: null, where: status.firstChild, missing: status.children[1], skipped: status.children[2], ask, ta: ask.querySelector('textarea'), path: ask.firstChild,
       send: ask.querySelector('.e-ask-send'), open: null, chain: [], level: 0, saved: [], undoTimer: null, key: 'deck:edit:' + location.pathname, items: [],
       outline: layer.children[2], tools: bar.querySelector('.e-tools'), modes: bar.querySelectorAll('.e-mode button'), undo: bar.querySelector('.e-do-undo'),
       save: bar.querySelector('.e-save'), sel: null, typing: null, seq: 0, done: [], unsaved: [], file: null, notesWere: '', slideLabels: [], add: bar.querySelector('.e-do-add'), skip: bar.querySelector('.e-do-skip-slide'), dropSlide: bar.querySelector('.e-do-drop-slide'),
@@ -896,6 +986,7 @@
       '.e-present': () => act('s')
     };
     for (const [selector, fn] of Object.entries(clicks)) bar.querySelector(selector).addEventListener('click', fn);
+    bar.querySelector('.e-lang')?.addEventListener('click', () => { settle(); setLang(nextLang()); });
     ed.undo.disabled = true;
     status.querySelector('.e-notes').addEventListener('click', () => act('n'));
     // a side pane folds away, and the slide takes its room; for this visit only
@@ -1179,7 +1270,7 @@
   const scope = () => openDetail() || slides[i];
   // the deepest element of what is edited at a point of the window, or nothing on its background; a drawing counts as one
   function pick(x, y) {
-    const within = scope(), el = document.elementsFromPoint(x, y).find(e => within.contains(e) && !e.closest(OFF_SLIDE));
+    const within = scope(), el = document.elementsFromPoint(x, y).find(e => within.contains(e) && !e.closest(OFF_SLIDE) && !e.closest('[data-lang-off]'));
     return el === within ? null : el?.closest('svg') || el;
   }
   // text as written in the deck, not as styled: its text nodes joined by spaces, without the notes and the slide counter
@@ -1451,6 +1542,15 @@
     ed.hover.hidden = true;
     const all = details(slides[i]);
     ed.where.textContent = `Slide ${i + 1} of ${slides.length}` + (det >= 0 ? `, detail ${det + 1} of ${all.length}` : '');
+    // the texts of the deck that have no version in the language shown, said in the status bar and dimmed on the slide
+    const missing = new Set([...stage.querySelectorAll('[data-lang-missing]')].map(x => versionsAround(x)[0])).size;
+    ed.missing.hidden = !missing;
+    ed.missing.textContent = `${missing} text${missing > 1 ? 's' : ''} without ${cur?.toUpperCase()}`;
+    const langButton = document.querySelector('#edit-bar .e-lang');
+    if (langButton) {
+      langButton.lastChild.textContent = cur.toUpperCase();
+      langButton.setAttribute('aria-label', `Language: ${cur.toUpperCase()}, show ${nextLang().toUpperCase()}`);
+    }
     ed.thumbs.forEach((t, n) => {
       t.classList.toggle('e-cur', n === i && det < 0);
       t.classList.toggle('e-skip', skips(slides[n]));
@@ -1535,11 +1635,17 @@
     return el?.closest('svg, .term, pre') || el;
   }
   // the block around a point, if it holds nothing but text and inline elements; a slide's layout elements do not qualify
+  // In a deck with languages, the version shown of a text is typed in on its own, inline or not: the block around it would
+  // hold the other versions too, which would go when its text is typed over
   function textTarget(x, y) {
     let el = pickWhole(x, y);
     if (!el || el.matches('svg, .term, pre')) return null;
-    while (getComputedStyle(el).display === 'inline') el = el.parentElement;
-    return el !== scope() && el.textContent.trim() && [...el.children].every(c => getComputedStyle(c).display.startsWith('inline')) ? el : null;
+    const version = el.closest('[lang]');
+    if (versioned(version) && scope().contains(version) && !version.hasAttribute('data-lang-off')) el = version;
+    else while (getComputedStyle(el).display === 'inline') el = el.parentElement;
+    const shown = c => !c.hasAttribute('data-lang-off');
+    return el !== scope() && el.textContent.trim() && [...el.children].filter(shown).every(c => getComputedStyle(c).display.startsWith('inline'))
+      && ![...el.children].some(c => !shown(c)) ? el : null;
   }
   // the element next to this one, passing over the engine's counter and the notes
   function neighbour(el, step) {
@@ -1554,8 +1660,9 @@
     if (!el) return;
     outline(ed.outline, frame(el));
     ed.tools.querySelector('.e-do-parent').disabled = el.parentElement === scope();
-    ed.tools.querySelector('.e-do-earlier').disabled = !neighbour(el, -1);
-    ed.tools.querySelector('.e-do-later').disabled = !neighbour(el, 1);
+    const run = versioned(el) ? versionsAround(el) : [el];
+    ed.tools.querySelector('.e-do-earlier').disabled = !neighbour(run[0], -1);
+    ed.tools.querySelector('.e-do-later').disabled = !neighbour(run.at(-1), 1);
   }
   const isSpace = n => n?.nodeType === Node.TEXT_NODE && !n.data.trim();
   // A copy of an element in which every node has the id of its original, so that an edit recorded against the copy can be
@@ -1642,6 +1749,35 @@
     if (onIt) show(slides.indexOf(slide), true, Math.min(k, details(slide).length - 1));
     else showSlide(slides[i], open ? idOf(open) : 0);
   }
+  // Delete, duplicate or move every version of a text together. A copy comes after the last version, its versions in the
+  // same order; a move goes past the versions of the text next to it, or past one element
+  function performAll(root, el, op) {
+    const run = versionsAround(el), first = run[0], last = run.at(-1);
+    if (op.kind === 'delete') {
+      run.forEach(drop);
+      return true;
+    }
+    if (op.kind === 'duplicate') {
+      const lead = isSpace(first.previousSibling) ? first.previousSibling.data : '\n';
+      const made = twin(op.made), copies = run.map(x => x === el ? made : twin(copyOf(x)));
+      last.after(...copies.flatMap(c => [lead, c]));
+      return true;
+    }
+    // a move swaps the text with what is next to it: the versions of the text there, or one element
+    const near = op.step < 0 ? neighbour(first, -1) : neighbour(last, 1);
+    if (!near) return false;
+    const other = versioned(near) ? versionsAround(near) : [near];
+    const [a, b] = op.step < 0 ? [other, run] : [run, other];
+    // the nodes of b, from its first to its last element with what is between them, go in front of a
+    const span = [];
+    for (let n = b[0]; n; n = n.nextSibling) { span.push(n); if (n === b.at(-1)) break; }
+    const gap = isSpace(b[0].previousSibling) ? b[0].previousSibling.cloneNode() : document.createTextNode('\n');
+    a[0].before(...span, gap);
+    // the white space that was before b goes with it
+    const left = a.at(-1).nextSibling;
+    if (isSpace(left) && isSpace(left.nextSibling)) left.remove();
+    return true;
+  }
   // apply an edit to a slide or to a copy of one; false, with nothing changed, if its element is gone
   function perform(root, op) {
     if (op.kind === 'notes') {
@@ -1655,7 +1791,9 @@
       target?.toggleAttribute('data-skip', op.on);
       return !!target;
     }
-    const el = findById(root, op.id), other = el && op.kind === 'move' && neighbour(el, op.step);
+    const el = findById(root, op.id);
+    if (el && ['delete', 'duplicate', 'move'].includes(op.kind) && versioned(el)) return performAll(root, el, op);
+    const other = el && op.kind === 'move' && neighbour(el, op.step);
     if (!el || (op.kind === 'move' && !other)) return false;
     if (op.kind === 'move') swapNodes(el, other);
     if (op.kind === 'delete') {
@@ -1674,10 +1812,11 @@
     if (op.kind === 'duplicate') el.after(...(isSpace(el.previousSibling) ? [el.previousSibling.cloneNode()] : []), twin(op.made));
     return true;
   }
-  // change the selected element; a copy is what is selected next
+  // Change the selected element; a copy is what is selected next. A text in several languages is changed as a whole:
+  // deleting, duplicating or moving one version does the same to the others, so the languages keep in step
   function alter(what, op) {
     const el = ed.sel, slide = slideOf(el), before = twin(slide), detail = nameOf(el);
-    op.id = elementIds.get(el);
+    op.id = idOf(el);
     if (op.kind === 'duplicate') op.made = twin(copyOf(el));
     perform(slide, op);
     const shows = op.made ? elementIds.get(op.made) : op.id;
@@ -1881,11 +2020,13 @@
       f.addEventListener('load', () => { sub.loaded = true; sendView(f, slides[n].outerHTML, k); });
       f.src = here + '?view';
       subs.append(sub);
+      // sub-thumbnails above the current slide push it down: it stays in view
+      if (n < i) ed.thumbs[i]?.scrollIntoView({ block: 'nearest' });
     }
     // one still loading gets the slide when it has loaded
     [...subs.children].forEach((sub, k) => { if (sub.loaded) sendView(sub.querySelector('iframe'), slides[n].outerHTML, k); });
   }
-  const sendView = (f, html, d = -1) => f.contentWindow.postMessage({ deck: 'view', i: 0, k: -1, d, html }, '*');
+  const sendView = (f, html, d = -1) => f.contentWindow.postMessage({ deck: 'view', i: 0, k: -1, d, html, lang: cur }, '*');
   function textNodes(el) {
     const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), t = [];
     while (w.nextNode()) t.push(w.currentNode);
@@ -1950,6 +2091,13 @@
     copy.querySelectorAll('.slide.current').forEach(s => s.classList.remove('current'));
     copy.querySelectorAll('.detail.open').forEach(x => x.classList.remove('open'));
     copy.querySelectorAll('[data-detail][aria-expanded]').forEach(o => o.removeAttribute('aria-expanded'));
+    copy.querySelectorAll('[data-lang-off], [data-lang-missing]').forEach(x => { x.removeAttribute('data-lang-off'); x.removeAttribute('data-lang-missing'); });
+    copy.querySelectorAll('[data-set-lang][aria-pressed]').forEach(b => b.removeAttribute('aria-pressed'));
+    if (langs.length > 1) {
+      ownLang === null ? copy.removeAttribute('lang') : copy.setAttribute('lang', ownLang);
+      const t = copy.querySelector('title');
+      if (t) t.textContent = ownTitle;
+    }
     copy.querySelectorAll('.build.on').forEach(b => b.classList.remove('on'));
     copy.classList.remove('editing');
     ['--scale', '--edit-rail', '--edit-pane', '--edit-x', '--edit-y'].forEach(p => copy.style.removeProperty(p));
