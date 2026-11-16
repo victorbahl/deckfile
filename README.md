@@ -299,8 +299,9 @@ it looks.
 - Click an element, click the background to pin a spot, or drag a box around an
   area, then type the suggestion.
 - **Copy prompt** puts every suggestion on the clipboard as one Markdown prompt,
-  each with its slide, its position and a selector for its element, ready to
-  paste into Claude Code or another coding agent.
+  each with its slide and a selector for its element, and a position for a
+  point or an area, ready to paste into Claude Code or another coding agent. In
+  a deck with languages, it asks for each change in every language.
 - Suggestions are kept per deck in the browser's `localStorage`. One whose
   element has changed since is labelled **Changed**.
 

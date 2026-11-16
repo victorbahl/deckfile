@@ -963,8 +963,11 @@ test.describe('suggest', () => {
     expect(prompt).toContain('`' + fileName + '`');
     expect(prompt).toContain('## 1. Slide 1');
     expect(prompt).toContain('Suggestion: Make the heading shorter');
-    expect(prompt).toMatch(new RegExp('Where: box x \\d+-\\d+, y \\d+-\\d+, on `' + tag));
+    // an element clicked has no position, a point or an area drawn has one
+    expect(prompt).toMatch(new RegExp('\\nOn `' + tag));
     expect(prompt).toMatch(/Where: point x \d+, y \d+/);
+    expect(prompt).toMatch(/Where: box x \d+-\d+, y \d+-\d+, `/);
+    expect(prompt).toContain('Positions are in the 1920×1080 slide frame');
     expect(prompt).not.toContain('```');  // the selector and the text find it; no copy of its HTML
     expect(prompt).not.toMatch(/e-hover|e-mark|edit-layer/);
 
@@ -1035,7 +1038,7 @@ test.describe('suggest', () => {
     await expect(at).toHaveText('div.stat');
     await page.keyboard.press('Enter');
     const prompt = await copied(page);
-    expect(prompt).toContain('on `div.stat');
+    expect(prompt).toContain('On `div.stat');
     expect(prompt).toContain('Suggestion: Make it bigger');
     await expect(page.locator('.e-item')).toHaveCount(1);
 
