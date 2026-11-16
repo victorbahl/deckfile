@@ -118,6 +118,11 @@ a{color:inherit}
 .detail-close:hover{border-color:var(--ink)}
 [data-detail][aria-expanded]{text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:3px;text-underline-offset:10px}
 @media (prefers-reduced-motion:reduce){.detail{transition:none}}
+/* a choice of language, on the title card: the one shown is outlined in full */
+.lang-switch{display:flex;gap:8px;margin-top:56px}
+.lang-switch button{padding:10px 16px;border:1.5px solid var(--line);border-radius:2px;background:none;color:var(--muted);
+  font:500 22px/1 var(--font-mono);letter-spacing:.06em;cursor:pointer}
+.lang-switch button[aria-pressed=true]{border-color:var(--ink);color:var(--ink)}
 kbd{display:inline-block;min-width:1.3em;padding:9px 12px;border:1.5px solid var(--ink);border-radius:4px;
   font:500 .72em/1 var(--font-body);letter-spacing:0;text-align:center;margin-right:8px}
 

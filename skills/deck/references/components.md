@@ -25,6 +25,19 @@ Attributes:
 - `data-auto="600"` on a section reveals its `.build` elements by themselves, one every N ms, as soon as the slide is shown. Without a number it is 500. `→` and `←` take over.
 - `data-skip` on a section skips the slide: it stays in the file and the edit view, and is left out of the show, the slide numbers and the print.
 
+## Languages
+
+```html
+<html lang="en" data-langs="en fr">                     <!-- the languages of the deck, the first shown by default -->
+<h2><span lang="en">Fast to start</span><span lang="fr">Démarrer vite</span></h2>
+<p lang="en">One line</p>
+<p lang="fr">Une ligne</p>                              <!-- one element per language, side by side -->
+<div class="lang-switch"><button type="button" data-set-lang="en">EN</button><button type="button" data-set-lang="fr">FR</button></div>
+```
+
+Only mark what changes: text without `lang` shows in every language. Put the switch on the title card.
+Speaker notes take `lang` the same way. `data-fr="…"` on `<title>` gives the page title in French.
+
 ## Details
 
 ```html

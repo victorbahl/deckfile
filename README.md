@@ -121,6 +121,7 @@ between pages opened from `file://`.
 | `F` | fullscreen |
 | `P` | print to PDF, one page per slide, all builds shown |
 | `S` | presenter view in a second window |
+| `L` | next language, in a deck with languages, see [Languages](#languages) |
 | `E` | edit view, see [Editing and suggesting](#editing-and-suggesting) |
 | `N` / `Esc` | in the edit view: fold the notes pane / drop the selection, or else leave the view |
 | `Cmd/Ctrl+↑` / `↓` | in the edit view: move the current slide earlier / later |
@@ -157,6 +158,7 @@ The engine needs very little markup:
 | `data-auto="600"` on a section | its builds reveal by themselves, one every 600 ms (500 without a number), as soon as the slide shows; `→` and `←` take over |
 | `data-skip` on a section | the slide is skipped: left out of the show, the slide numbers and the print, and still there in the edit view |
 | `data-detail="more"` on any element | a click opens the `<aside class="detail" id="more">` of the same slide, see [Details](#details) |
+| `data-langs="en fr"` on `<html>`, `lang="fr"` on any element | the deck in two languages, one shown at a time, see [Languages](#languages) |
 | `<div class="s-notes">` inside a slide | speaker notes, for the presenter and edit views |
 | `data-public` on the stage | set by **Save public copy…** on the copy it makes: the deck opens without the edit view |
 
@@ -202,11 +204,44 @@ someone asks:
   rest. A theme can add other shapes with a class, such as `detail wide`, and
   one slide can mix them.
 
+### Languages
+
+One file can hold the deck in several languages. List them on `<html>`, the
+first one shown by default, and give each text that changes one element per
+language, side by side:
+
+```html
+<html lang="en" data-langs="en fr">
+…
+<h2><span lang="en">Fast to start</span><span lang="fr">Démarrer vite</span></h2>
+<p lang="en">One line in English.</p>
+<p lang="fr">Une ligne en français.</p>
+<p>Text without lang shows in every language.</p>
+<div class="s-notes"><p lang="en">Say this.</p><p lang="fr">Dites ceci.</p></div>
+```
+
+- `L`, the globe near the bottom-left corner or a button with
+  `data-set-lang="fr"` on a slide show another language. The choice is kept per
+  deck in this browser; `?lang=fr` in the URL sets it.
+- A text without a version in the language shown keeps the first language, so
+  a slide never has a hole. A `lang` that is not in `data-langs`, such as a
+  quote in German, is left alone.
+- The speaker notes, the presenter view, the page title (`data-fr="…"` on
+  `<title>`) and the print follow the language. A public copy keeps them all.
+- The default theme styles a `.lang-switch` of such buttons, for the title
+  card.
+
 Photographs live beside the deck as ordinary files and are referenced by
 relative path. Inline small things such as logos and icons as SVG; don't
 base64 large images into the HTML.
 
 ## Editing and suggesting
+
+A deck is HTML, so a coding agent writes most of it, and anything HTML and CSS
+can do is open to it. The edit view is for what is quicker by hand than asking
+the agent: fixing a word, a note, the order of points, skipping or deleting a
+slide or a detail. For anything more, say it in **Suggest** and hand the prompt
+to the agent.
 
 Press `E` for the edit view: thumbnails on the left, the slide with its speaker
 notes in the middle, and the unsaved edits or the suggestions on the right. The
@@ -228,6 +263,10 @@ it looks.
   open in the show or print. × on a detail's thumbnail deletes it too. With an
   element selected, the detail button of the toolbar adds a detail that
   element opens.
+- In a deck with languages, the globe in the toolbar shows the next one, and
+  you edit the one shown. Deleting, duplicating or moving a text does it in
+  every language. Texts with no version in the language shown are dimmed, and
+  the status bar counts them.
 - Add, duplicate and delete slides from the toolbar, and drag a thumbnail to
   reorder. New slides come from the layouts in the deck's
   `<template data-deck="layouts">`, which you can change or add to.

@@ -31,6 +31,7 @@ const CUR = '.slide.current';
 const FIRST_H1 = /(?<=<div id="stage">[\s\S]*?)<h1>[\s\S]*?<\/h1>/;
 const LAYOUTS = /<template data-deck="layouts">[\s\S]*?<\/template>\n/;
 const hasLayouts = LAYOUTS.test(readFileSync(deck, 'utf8'));
+const hasLangs = /<html[^>]*\bdata-langs="\S+\s+\S/.test(readFileSync(deck, 'utf8'));
 
 // fixtures
 // known slides, put in front of the deck under test (openKnown)
@@ -445,9 +446,11 @@ test.describe('slide view', () => {
     // close to the corner they appear, in this order, as icons with names
     await page.mouse.move(120, size.height - 60);
     await expect(controls).toHaveCSS('opacity', '1');
-    await expect(controls.locator('button')).toHaveCount(5);
-    await expect(controls.locator('button svg')).toHaveCount(5);
-    expect(await controls.locator('button').evaluateAll(all => all.map(b => b.getAttribute('aria-label')))).toEqual(['Back', 'Presenter view', 'Edit view', 'Keyboard shortcuts', 'Forward']);
+    // and Language, in a deck with languages
+    const names = ['Back', 'Presenter view', 'Edit view', ...hasLangs ? ['Language'] : [], 'Keyboard shortcuts', 'Forward'];
+    await expect(controls.locator('button')).toHaveCount(names.length);
+    await expect(controls.locator('button svg')).toHaveCount(names.length);
+    expect(await controls.locator('button').evaluateAll(all => all.map(b => b.getAttribute('aria-label')))).toEqual(names);
 
     // forward and back step like the arrow keys, and leave the slide click alone
     const { slides, manual } = await info(page);
@@ -2028,7 +2031,7 @@ test.describe('saving', () => {
       const d = new DOMParser().parseFromString(h, 'text/html');
       return { chrome: d.querySelectorAll('#notes, #deck-controls, #edit-css, #edit-bar, #edit-rail, #edit-status, #edit, #edit-ask, #edit-layer').length,
         engine: d.querySelectorAll('.counter, .slide.current, .build.on, [contenteditable]').length,
-        root: [...d.documentElement.attributes].map(a => a.name).filter(n => n !== 'lang') };
+        root: [...d.documentElement.attributes].map(a => a.name).filter(n => n !== 'lang' && n !== 'data-langs') };
     }, saved);
     expect(left).toEqual({ chrome: 0, engine: 0, root: [] });
 
@@ -2235,7 +2238,7 @@ test.describe('saving', () => {
     await expect(page.locator('.slide .counter')).toHaveText(['1 / 2', '2 / 2']);
     await page.keyboard.press('e');
     await expect(page.locator('#edit-bar')).toHaveCount(0);
-    await expect(page.locator('#deck-controls button')).toHaveCount(4);
+    await expect(page.locator('#deck-controls button')).toHaveCount(hasLangs ? 5 : 4);
     await expect(page.locator('#deck-controls .c-edit')).toHaveCount(0);
     await expect(page.locator('#deck-help')).not.toContainText('Edit view');
     await page.keyboard.press('ArrowRight');
@@ -3800,5 +3803,218 @@ test.describe('details', () => {
     await page.locator('.o1').click();
     await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-one');
     await expect(page.locator('#d-one .detail-close')).toBeVisible();
+  });
+});
+
+// two slides in English and French: a heading with inline versions, a pair of blocks, a text in both, a list where one item
+// has no French, a language switch and notes in both
+const BILINGUAL = `<section class="slide">
+  <h2><span lang="en">Hello</span><span lang="fr">Bonjour</span></h2>
+  <p class="sub" lang="en">An English line</p>
+  <p class="sub" lang="fr">Une ligne en français</p>
+  <p class="both">Same in both</p>
+  <p class="switch"><button type="button" data-set-lang="en">EN</button> <button type="button" data-set-lang="fr">FR</button></p>
+  <div class="s-notes"><p lang="en">Say hello</p><p lang="fr">Dis bonjour</p></div>
+</section>
+
+<section class="slide">
+  <h2>Second</h2>
+  <ul>
+    <li lang="en">One</li>
+    <li lang="fr">Un</li>
+    <li lang="en">Only English</li>
+    <li>Plain</li>
+  </ul>
+</section>`;
+const bilingual = (html, slides = BILINGUAL) => html
+  .replace(/<html lang="en">/, '<html lang="en" data-langs="en fr">')
+  .replace(/<title>[^<]*<\/title>/, '<title data-fr="Titre">Title</title>')
+  .replace(/<div id="stage">[\s\S]*?<\/div>\s*<script data-deck="engine">/, `<div id="stage">\n\n${slides}\n\n</div>\n\n<script data-deck="engine">`);
+async function openBilingual(page, slides) {
+  await page.goto(pathToFileURL(tempFile(bilingual(readFileSync(deck, 'utf8'), slides))).href);
+  await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
+  await page.reload();
+}
+// the text a slide shows, as one line
+const seen = (page, selector = CUR) => page.locator(selector).evaluate(el => el.innerText.replace(/\s+/g, ' ').trim());
+
+test.describe('languages', () => {
+  test('a deck with languages shows the first one, and L, a button or ?lang= shows another', async ({ page }) => {
+    await openBilingual(page);
+    expect(await seen(page)).toBe('Hello An English line Same in both EN FR 1 / 2');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page).toHaveTitle('Title');
+    await expect(page.locator('[data-set-lang="en"]')).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('l');
+    expect(await seen(page)).toBe('Bonjour Une ligne en français Same in both EN FR 1 / 2');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+    await expect(page).toHaveTitle('Titre');
+    await expect(page.locator('[data-set-lang="fr"]')).toHaveAttribute('aria-pressed', 'true');
+    // the button on the slide, which does not move the deck
+    await page.locator('[data-set-lang="en"]').click();
+    expect(await seen(page)).toContain('Hello An English line');
+    expect(await current(page)).toBe(0);
+    // remembered across visits; ?lang= has the last word
+    await page.locator('[data-set-lang="fr"]').click();
+    await page.reload();
+    expect(await seen(page)).toContain('Bonjour');
+    await page.goto(page.url().split('?')[0] + '?lang=en');
+    expect(await seen(page)).toContain('Hello');
+  });
+
+  test('a text without the language shown shows in the first language; an item list keeps each item apart', async ({ page }) => {
+    await openBilingual(page);
+    await page.keyboard.press('l');
+    await page.keyboard.press('ArrowDown');
+    expect(await seen(page)).toBe('Second Un Only English Plain 2 / 2');
+  });
+
+  test('the notes, the presenter view and its panes follow the language; L there switches the deck', async ({ page }) => {
+    await openBilingual(page);
+    await page.keyboard.press('l');
+    const pv = await openPresenter(page);
+    // the text it shows: the other version is still in the notes, hidden
+    const said = () => pv.locator('#notes').evaluate(n => n.innerText.replace(/\s+/g, ' ').trim());
+    await expect.poll(said).toBe('Dis bonjour');
+    const pane = pane => pv.frameLocator(pane).locator(`${CUR} h2`).evaluate(h => h.innerText);
+    await expect.poll(() => pane('.p-slide iframe')).toBe('Bonjour');
+    await expect(pv.frameLocator('.p-next iframe').locator(`${CUR} li:visible`).first()).toHaveText('Un');
+    await pv.keyboard.press('l');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect.poll(() => pane('.p-slide iframe')).toBe('Hello');
+    await expect.poll(said).toBe('Say hello');
+  });
+
+  test('print shows the language shown', async ({ page }) => {
+    await openBilingual(page);
+    await page.keyboard.press('l');
+    await page.emulateMedia({ media: 'print' });
+    expect(await seen(page, '#stage')).toContain('Bonjour Une ligne en français');
+    expect(await seen(page, '#stage')).not.toContain('Hello');
+  });
+
+  test('a deck without languages has no switch, no L and no lang marks', async ({ page }) => {
+    const html = readFileSync(deck, 'utf8').replace(/(<html[^>]*?) data-langs="[^"]*"/, '$1');
+    await page.goto(pathToFileURL(tempFile(html)).href);
+    await page.mouse.move(120, page.viewportSize().height - 60);
+    await expect(page.locator('#deck-controls .c-lang')).toHaveCount(0);
+    const was = await seen(page);
+    await page.keyboard.press('l');
+    expect(await seen(page)).toBe(was);
+    await page.keyboard.press('e');
+    await expect(page.locator('#edit-bar .e-lang')).toHaveCount(0);
+    await expect(page.locator('.e-missing')).toBeHidden();
+    // a lang outside the languages of the deck, like a quote, is left alone
+    await openBilingual(page, `<section class="slide">\n  <h2>Quote</h2>\n  <p lang="de">Guten Tag</p>\n</section>`);
+    await expect(page.locator('[lang="de"]')).toBeVisible();
+  });
+
+  test('the corner bar has a language button, and the shortcuts list L', async ({ page }) => {
+    await openBilingual(page);
+    await page.mouse.move(120, page.viewportSize().height - 60);
+    const button = page.locator('#deck-controls .c-lang');
+    await expect(button).toHaveAttribute('aria-label', 'Language');
+    await button.click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+    expect(await current(page)).toBe(0);
+    await page.locator('#deck-controls .c-help').click();
+    await expect(page.locator('#deck-help')).toContainText('Language');
+  });
+
+  test('the edit view edits the language shown, and its switch shows the other', async ({ page }) => {
+    await fakeDialog(page);
+    await openBilingual(page);
+    await page.keyboard.press('e');
+    const lang = page.locator('#edit-bar .e-lang');
+    await expect(lang).toHaveText('EN');
+    await expect(lang).toHaveAttribute('aria-label', 'Language: EN, show FR');
+    // a double-click types in the version shown, inline or a block, and leaves the other one alone
+    await typeIn(page, `${CUR} h2 [lang="en"]`);
+    await page.keyboard.press('End');
+    await page.keyboard.type('!');
+    await page.keyboard.press('Enter');
+    await expect(page.locator(`${CUR} h2`)).toHaveText('Hello!Bonjour');
+    await lang.click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+    await expect(lang).toHaveText('FR');
+    await typeIn(page, `${CUR} .sub[lang="fr"]`);
+    await page.keyboard.press('End');
+    await page.keyboard.type(' !');
+    await page.keyboard.press('Enter');
+    await expect(page.locator(`${CUR} .sub[lang="en"]`)).toHaveText('An English line');
+    await expect(page.locator(`${CUR} .sub[lang="fr"]`)).toHaveText('Une ligne en français !');
+    expect(await seen(page, '#notes')).toBe('Dis bonjour');
+    // the thumbnails show the language shown
+    await expect(thumbSlide(page, 0).locator('h2 [lang="fr"]')).toBeVisible();
+    await expect(thumbSlide(page, 0).locator('h2 [lang="en"]')).toBeHidden();
+
+    // the file keeps both, and none of the marks of the language shown
+    const html = await save(page);
+    const stage = stageOf(html);
+    expect(stage).toContain('<h2><span lang="en">Hello!</span><span lang="fr">Bonjour</span></h2>');
+    expect(stage).not.toMatch(/data-lang-off|data-lang-missing|aria-pressed/);
+    expect(html).toMatch(/<html lang="en" data-langs="en fr">/);
+    expect(html).toContain('<title data-fr="Titre">Title</title>');
+  });
+
+  test('deleting, duplicating or moving a text in the edit view does the same in every language', async ({ page }) => {
+    await openBilingual(page);
+    await page.keyboard.press('e');
+    const subs = () => page.locator(`${CUR} .sub`).evaluateAll(all => all.map(x => x.getAttribute('lang') + ':' + x.textContent));
+    await clickOn(page, `${CUR} .sub[lang="en"]`);
+    await page.locator('.e-do-delete').click();
+    expect(await subs()).toEqual([]);
+    await expect(page.locator(`${CUR} .both`)).toHaveText('Same in both');
+    await undoKey(page);
+    expect(await subs()).toEqual(['en:An English line', 'fr:Une ligne en français']);
+
+    await clickOn(page, `${CUR} .sub[lang="en"]`);
+    await page.locator('.e-do-duplicate').click();
+    expect(await subs()).toEqual(['en:An English line', 'fr:Une ligne en français', 'en:An English line', 'fr:Une ligne en français']);
+    // the copy is selected, and shows one version only
+    await expect(page.locator(`${CUR} .sub:visible`)).toHaveCount(2);
+    await undoKey(page);
+
+    // Move later passes the text in both; Move earlier brings it back
+    await clickOn(page, `${CUR} .sub[lang="en"]`);
+    await page.locator('.e-do-later').click();
+    expect(await page.locator(`${CUR} > :is(h2, p)`).evaluateAll(all => all.map(x => x.className || x.localName)))
+      .toEqual(['h2', 'both', 'sub', 'sub', 'switch']);
+    await page.locator('.e-do-earlier').click();
+    expect(await page.locator(`${CUR} > :is(h2, p)`).evaluateAll(all => all.map(x => x.className || x.localName)))
+      .toEqual(['h2', 'sub', 'sub', 'both', 'switch']);
+    // the first text cannot go earlier, its versions counted as one
+    await clickOn(page, `${CUR} h2`);
+    await expect(page.locator('.e-do-earlier')).toBeDisabled();
+  });
+
+  test('the edit view counts and dims the texts that have no version in the language shown', async ({ page }) => {
+    await openBilingual(page);
+    await page.keyboard.press('e');
+    const missing = page.locator('.e-missing');
+    await expect(missing).toBeHidden();
+    await page.locator('#edit-bar .e-lang').click();
+    await page.locator('.e-thumb').nth(1).click();
+    await expect(missing).toHaveText('1 text without FR');
+    await expect(page.locator('[data-lang-missing]')).toHaveText('Only English');
+    expect(+await page.locator('[data-lang-missing]').evaluate(x => getComputedStyle(x).opacity)).toBeLessThan(1);
+    // not in the show
+    await page.keyboard.press('Escape');
+    expect(+await page.locator('[data-lang-missing]').evaluate(x => getComputedStyle(x).opacity)).toBe(1);
+  });
+
+  test('a public copy keeps both languages and the switch', async ({ page }) => {
+    await openBilingual(page);
+    await page.keyboard.press('e');
+    await page.evaluate(() => { delete window.showSaveFilePicker; });
+    await page.locator('.e-save').click();
+    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#edit-copy .e-copy-go').click()]);
+    const html = readFileSync(await download.path(), 'utf8');
+    expect(html).toContain('<span lang="fr">Bonjour</span>');
+    expect(html).toContain('data-set-lang="fr"');
+    expect(html).toMatch(/<html lang="en" data-langs="en fr">/);
+    await page.goto(pathToFileURL(tempFile(html)).href);
+    await page.keyboard.press('l');
+    expect(await seen(page)).toContain('Bonjour');
   });
 });
