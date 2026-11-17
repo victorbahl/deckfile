@@ -197,8 +197,10 @@ someone asks:
   those of its slide when it has none.
 - Print gives each detail a page of its own, right after its slide: the slide
   with that detail open.
-- The theme gives a detail its look and place. The default theme slides a
-  panel over the right half and dims the rest.
+- The engine only shows and hides a detail; the theme gives it its look and
+  place. The default theme slides a panel over the right half and dims the
+  rest. A theme can add other shapes with a class, such as `detail wide`, and
+  one slide can mix them.
 
 Photographs live beside the deck as ordinary files and are referenced by
 relative path. Inline small things such as logos and icons as SVG; don't

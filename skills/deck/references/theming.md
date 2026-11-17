@@ -83,6 +83,8 @@ h1,h2{font-family:var(--font-body);text-transform:uppercase;letter-spacing:.01em
 /* rounded panels and buttons */
 .term,.window{border-radius:20px}
 .btn{border-radius:999px}
+/* a second shape of detail, nearly the whole slide, for a screenshot: <aside class="detail wide"> */
+.detail.wide{left:96px;width:auto}
 /* centred title card */
 .slide.title{justify-content:center;align-items:center;text-align:center}
 ```

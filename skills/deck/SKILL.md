@@ -65,7 +65,7 @@ Before you report the deck as done, check it and fix what fails:
 - [ ] Images are relative files that exist. Nothing is base64-encoded except small SVG logos.
 - [ ] Every font is openly licensed (for example SIL OFL), and no commercial face is named, even as a fallback.
 - [ ] The `data-deck="engine"` blocks are unchanged from the template (`npx github:roaldnefs/deckfile update --check <slug>/index.html` exits 0).
-- [ ] Every `data-detail` names the id of an `<aside class="detail">` in the same slide, and every detail fits its panel when open.
+- [ ] Every `data-detail` names the id of an `<aside class="detail">` in the same slide, and every detail fits the shape its theme gives it when open.
 - [ ] Nothing overflows the 1920×1080 canvas. As a rule of thumb, at most 5 bullets per slide, terminal panels of 12 lines or fewer, and headings that fit on two lines.
 - [ ] The slide count fits the time slot.
 

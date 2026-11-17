@@ -37,7 +37,7 @@ Attributes:
 </aside>
 ```
 
-A panel over the right half of the slide, the rest dimmed; it has room for a heading and a few lines, not a second slide.
+The engine only shows and hides a detail; the theme gives it its shape. The default theme slides a panel over the right half of the slide and dims the rest: room for a heading and a few lines, not a second slide. A theme can add other shapes with a class, such as `<aside class="detail wide">` for a screenshot, see [theming.md](theming.md#skins).
 Use it for the answer to a question you expect. Each detail prints on a page of its own after its slide.
 `data-skip` on a detail keeps it in the file without opening it in the show or the print.
 
