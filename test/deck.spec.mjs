@@ -3760,6 +3760,18 @@ test.describe('details', () => {
     expect(await page.locator('.slide').nth(1).locator('[data-detail]').evaluateAll(all => all.map(o => o.dataset.detail))).toEqual(ids);
   });
 
+  test('a theme may set any z-index on its details: they stay editable and open to suggestions', async ({ page }) => {
+    await openOnly(page, DETAILED.replace('<section class="slide">', '<section class="slide"><style>.detail{z-index:9999}</style>'));
+    await page.locator('.e-sub').nth(0).click();
+    await clickOn(page, '#d-one > p');
+    await expect(page.locator('.e-tools')).toBeVisible();
+    await typeIn(page, '#d-one h2');
+    await page.keyboard.press('Escape');
+    await page.locator('.e-mode-suggest').click();
+    await suggest(page, '#d-one h2', 'Shorter');
+    await expect(page.locator('.e-marks .e-box')).toHaveCount(1);
+  });
+
   test('suggestions on a detail belong to it, and show only while it is open', async ({ page }) => {
     await openOnly(page, DETAILED);
     await page.locator('.e-sub').nth(0).click();

@@ -623,7 +623,7 @@
         /* nothing moves here: outlines are measured from what is on the slide */
         html.editing :is(.build,.detail){transition:none}
         html.editing .slide,html.editing .slide *{animation:none!important}
-        html.editing #edit-layer{display:block;position:absolute;inset:0;z-index:5;cursor:default;touch-action:none}
+        html.editing #edit-layer{display:block;position:absolute;inset:0;z-index:2147483647;cursor:default;touch-action:none}
         /* marks sit in the scaled slide; dividing by --scale keeps their lines and numbers one size on screen.
            A thin dark edge keeps the orange visible on any slide */
         .e-mark{position:absolute;pointer-events:none}
