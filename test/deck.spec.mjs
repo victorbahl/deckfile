@@ -3493,6 +3493,8 @@ test.describe('details', () => {
     const subs = page.locator('.e-thumb').nth(0).locator('.e-sub');
     await expect(subs).toHaveCount(2);
     await expect(page.locator('.e-thumb').nth(1).locator('.e-sub')).toHaveCount(0);
+    // each loads the whole deck, so only once it is near the rail's view, as the slide thumbnails do
+    await expect(subs.locator('iframe').nth(0)).toHaveAttribute('loading', 'lazy');
     await expect(page.frameLocator('.e-thumb:nth-child(1) .e-sub:nth-child(1) iframe').locator('.detail.open')).toHaveAttribute('id', 'd-one');
     await subs.nth(0).click();
     await expect(page.locator(OPEN)).toHaveAttribute('id', 'd-one');

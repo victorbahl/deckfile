@@ -2541,7 +2541,7 @@ Suggestion: <span class="w">Make this heading shorter</span></div>
     while (subs.children.length < count) {
       const k = subs.children.length, sub = document.createElement('div');
       sub.className = 'e-sub';
-      sub.innerHTML = `<span class="e-sub-frame"><iframe tabindex="-1" title="Slide ${n + 1}, detail ${k + 1}"></iframe></span>` +
+      sub.innerHTML = `<span class="e-sub-frame"><iframe tabindex="-1" loading="lazy" title="Slide ${n + 1}, detail ${k + 1}"></iframe></span>` +
         `<span class="e-thumb-skip">${icon('skip', 24)}</span>` + tool('e-thumb-del', 'Delete detail', 'close', 12);
       sub.lastChild.addEventListener('click', e => {
         e.stopPropagation();
