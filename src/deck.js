@@ -1659,8 +1659,10 @@
     if (!el || (op.kind === 'move' && !other)) return false;
     if (op.kind === 'move') swapNodes(el, other);
     if (op.kind === 'delete') {
-      // a detail takes with it the data-detail of what opened it
-      if (el.matches('.detail')) root.querySelectorAll('[data-detail]').forEach(o => { if (o.dataset.detail === el.id) o.removeAttribute('data-detail'); });
+      // a detail takes with it the data-detail of what opened it, and the aria-expanded that made it look like an opener
+      if (el.matches('.detail')) root.querySelectorAll('[data-detail]').forEach(o => {
+        if (o.dataset.detail === el.id) ['data-detail', 'aria-expanded'].forEach(a => o.removeAttribute(a));
+      });
       drop(el);
     }
     if (op.kind === 'detail') {

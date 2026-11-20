@@ -3680,6 +3680,8 @@ test.describe('details', () => {
     await expect(page.locator('.e-sub')).toHaveCount(1);
     await expect(page.locator('.e-sub').nth(0)).toHaveClass(/e-cur/);
     await expect(page.locator('.o1')).not.toHaveAttribute('data-detail', /.*/);
+    // nor does it still look like one, open or not
+    await expect(page.locator('.o1')).not.toHaveAttribute('aria-expanded', /.*/);
     await expect(rowsSaid(page)).toHaveText(['Deleted detail']);
     // the last one: back to the slide, whose toolbar is the slide's
     await drop.click();
