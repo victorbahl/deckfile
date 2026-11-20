@@ -198,10 +198,16 @@ it looks.
   it, for the question it answers; the next key goes on with the deck.
 - **Undo** or `Cmd/Ctrl+Z` takes back one change. × on a row in the list of
   unsaved edits removes just that edit.
-- **Save** opens a menu with two choices:
-  - **Save**, or `Cmd/Ctrl+S` straight away, writes the deck: to a file you
-    choose in Chromium, as a download elsewhere. It overwrites what is there,
-    so reload first if an agent or editor changed the file since you opened it.
+- **Save** opens a menu with three choices:
+  - **Save**, or `Cmd/Ctrl+S` straight away, writes the deck to its file. A
+    page cannot reach the file it was opened from, so the first save in
+    Chromium says which file to choose and asks for it: select the deck in the
+    dialog. Later saves and visits write to it, after one click to allow it. A
+    file under another name is left alone. Other browsers download the deck.
+    A save overwrites what is there, so reload first if an agent or editor
+    changed the file since you opened it.
+  - **Save a copy…** makes a copy of the whole deck, named `…-copy.html`, and
+    leaves this deck the one you edit.
   - **Save public copy…** makes a copy to send to your audience, named
     `…-public.html`: the deck as it is now, without the speaker notes, the
     skipped slides, the layouts and the comments between the slides. The menu
