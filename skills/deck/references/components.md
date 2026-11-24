@@ -24,6 +24,7 @@ logo sits in the bottom-left corner.
 Attributes:
 - `data-auto="600"` on a section reveals its `.build` elements by themselves, one every N ms, as soon as the slide is shown. Without a number it is 500. `→` and `←` take over.
 - `data-skip` on a section skips the slide: it stays in the file and the edit view, and is left out of the show, the slide numbers and the print.
+- `id="part-2"` on a section and `<a href="#part-2">` anywhere: a click shows that slide, its builds hidden; `deck.html#part-2` opens the deck on it. Use it for an agenda that links each part to its section; the links also work in the PDF.
 
 ## Languages
 

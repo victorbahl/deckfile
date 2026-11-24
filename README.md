@@ -158,6 +158,7 @@ The engine needs very little markup:
 | `data-auto="600"` on a section | its builds reveal by themselves, one every 600 ms (500 without a number), as soon as the slide shows; `→` and `←` take over |
 | `data-skip` on a section | the slide is skipped: left out of the show, the slide numbers and the print, and still there in the edit view |
 | `data-detail="more"` on any element | a click opens the `<aside class="detail" id="more">` of the same slide, see [Details](#details) |
+| `id="part-2"` on a section, `<a href="#part-2">` | a link that shows that slide, its builds hidden; `deck.html#part-2` opens the deck there. An agenda can link each part to its section, and the links still work in the PDF |
 | `data-langs="en fr"` on `<html>`, `lang="fr"` on any element | the deck in two languages, one shown at a time, see [Languages](#languages) |
 | `<div class="s-notes">` inside a slide | speaker notes, for the presenter and edit views |
 | `data-public` on the stage | set by **Save public copy…** on the copy it makes: the deck opens without the edit view |

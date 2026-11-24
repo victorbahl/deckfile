@@ -67,6 +67,7 @@ Before you report the deck as done, check it and fix what fails:
 - [ ] The `data-deck="engine"` blocks are unchanged from the template (`npx github:roaldnefs/deckfile update --check <slug>/index.html` exits 0).
 - [ ] In a deck with `data-langs`, every text that changes has one element per language, side by side, and the notes too.
 - [ ] Every `data-detail` names the id of an `<aside class="detail">` in the same slide, and every detail fits the shape its theme gives it when open.
+- [ ] Every `<a href="#…">` names the id of a slide in the deck.
 - [ ] Nothing overflows the 1920×1080 canvas. As a rule of thumb, at most 5 bullets per slide, terminal panels of 12 lines or fewer, and headings that fit on two lines.
 - [ ] The slide count fits the time slot.
 

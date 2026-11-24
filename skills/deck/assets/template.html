@@ -796,6 +796,8 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
     data-detail="id" on any element     a click opens <aside class="detail" id="id"> of the same slide; Esc, ← or a click
                                         outside closes it, → closes it and goes on. Print gives each detail a page after its slide
     data-public on the stage           a public copy made in the edit view, to hand out: it has no edit view
+    id="part-2" on a section           <a href="#part-2"> shows that slide, all its builds hidden, and so does
+                                        deck.html#part-2 when the deck opens; an agenda can link each part to its section
   Languages: data-langs="en fr" on <html> lists the languages of the deck, the first one shown unless another was chosen.
     lang="fr" on any element in a slide or in the notes   shown only in French; elements side by side, one per language,
                                         are versions of the same text. Text without lang shows in every language.
@@ -1015,6 +1017,11 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
   }
   // where a deck opens when the current slide is skipped: on the next one shown, or else the one before
   const land = () => seek(seek(i, 1), -1);
+  // the place of the slide with this id (#part-2 or part-2), or -1; a skipped slide is a place to link to, as from the edit view
+  const slideNamed = hash => {
+    const id = decodeURIComponent(String(hash).replace(/^#/, ''));
+    return id ? slides.findIndex(s => s.id === id) : -1;
+  };
   // with a detail open, → closes it and goes on, ← only closes it
   function next() {
     clearTimeout(autoTimer);
@@ -1216,6 +1223,9 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
       if (e.target.closest('.detail-close') || !e.target.closest('.detail')) setDetail(-1);
       return;
     }
+    // a link to a slide of the deck shows it, as a jump; the address keeps no #, so a refresh stays where the show is
+    const link = e.target.closest('a[href^="#"]'), to = link ? slideNamed(link.hash) : -1;
+    if (to >= 0) { e.preventDefault(); return show(to); }
     if (e.target.closest('a, button, input, select, textarea, label, summary, video, audio')) return;
     (e.clientX < innerWidth * 0.3 ? prev : next)();
   });
@@ -1287,7 +1297,13 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
   addEventListener('resize', fit);
   fit();
   // a refresh in the edit view is about to return to it, on the same slide
-  show(store.get(EDIT_KEY) ? i : land());
+  // deck.html#part-2 opens on that slide; then the # goes, so a refresh stays on the slide shown
+  const asked = mode === 'deck' ? slideNamed(location.hash) : -1;
+  if (asked >= 0) {
+    i = asked;
+    history.replaceState(history.state, '', location.href.split('#')[0]);
+  }
+  show(asked >= 0 || store.get(EDIT_KEY) ? i : land());
   // keep the screen awake while the deck shows; the browser drops the lock when the tab is hidden, and may refuse it
   const awake = () => { if (document.visibilityState === 'visible') navigator.wakeLock?.request('screen').catch(() => {}); };
   if (mode !== 'view') { awake(); document.addEventListener('visibilitychange', awake); }

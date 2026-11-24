@@ -78,6 +78,10 @@ const CONTROLS = `<section class="slide">
 // the first, the middle and the last slide are skipped
 const SKIPPING = ['A', 'B', 'C', 'D', 'E'].map((h, k) => `<section class="slide"${k % 2 ? '' : ' data-skip'}>\n  <h2>${h}</h2>\n</section>`).join('\n\n');
 const FOUR = ['A', 'B', 'C', 'D'].map(h => `<section class="slide">\n  <h2>${h}</h2>\n  <p>Text ${h}</p>\n</section>`).join('\n\n');
+// an agenda that links to its parts, the last one with builds
+const LINKED = `<section class="slide">\n  <h2>Agenda</h2>\n  <ol><li><a href="#part-2">Two</a></li><li><a href="#part-3">Three</a></li></ol>\n</section>\n\n` +
+  `<section class="slide" id="part-2">\n  <h2>Two</h2>\n</section>\n\n` +
+  `<section class="slide" id="part-3">\n  <h2>Three</h2>\n  <p class="build">One</p>\n  <p class="build">Two</p>\n</section>`;
 const firstSlide = (html, section) => html.replace(/<div id="stage">\s*\n/, m => m + section);
 const tempFile = html => {
   const file = path.join(mkdtempSync(path.join(tmpdir(), 'deck-')), path.basename(deck));
@@ -580,6 +584,30 @@ test.describe('slide view', () => {
     await page.locator(`${CUR} select`).evaluate(s => s.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })));
     expect(await current(page)).toBe(0);
     expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
+  });
+
+  test('a link to a slide shows it, and the deck opens on the slide its address names', async ({ page }) => {
+    const html = readFileSync(deck, 'utf8').replace(/<div id="stage">[\s\S]*?<\/div>\s*<script data-deck="engine">/,
+      `<div id="stage">\n\n${LINKED}\n\n</div>\n\n<script data-deck="engine">`);
+    const file = pathToFileURL(tempFile(html)).href;
+    await page.goto(file);
+    await page.locator(`${CUR} a[href="#part-3"]`).click();
+    expect(await current(page)).toBe(2);
+    expect(await builtOn(page)).toBe(0);
+    await page.keyboard.press('ArrowRight');
+    expect(await builtOn(page)).toBe(1);
+    // the address keeps no #, so a refresh stays where the show is
+    expect(page.url()).toBe(file);
+    await page.keyboard.press('Home');
+    await page.locator(`${CUR} a[href="#part-2"]`).click();
+    expect(await current(page)).toBe(1);
+    // an address with #id opens on that slide, then drops the #
+    await page.goto('about:blank');
+    await page.goto(file + '#part-3');
+    expect(await current(page)).toBe(2);
+    expect(page.url()).toBe(file);
+    await page.reload();
+    expect(await current(page)).toBe(2);
   });
 
   test('a click on a control of a slide does not move the deck', async ({ page }) => {
