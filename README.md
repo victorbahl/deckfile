@@ -324,6 +324,24 @@ or a different title card, goes in the theme block or the deck-specific block.
 The tokens are listed in
 [`skills/deck/references/theming.md`](skills/deck/references/theming.md).
 
+A theme can also change slides with a transition. Set `--slide-transition` on
+`:root` to any value but `none`, and the show changes slides inside a
+[view transition](https://developer.mozilla.org/docs/Web/API/View_Transition_API),
+typed `forward` or `backward`; the theme animates it:
+
+```css
+:root{--slide-transition:dissolve}
+/* the next slide fades in over this one, never through black */
+::view-transition-old(root){animation:none}
+::view-transition-new(root){animation:.45s ease both fade-in}
+@keyframes fade-in{from{opacity:0}}
+/* by direction: html:active-view-transition-type(backward)::view-transition-new(root){…} */
+```
+
+The edit view, the presenter's panes, print and reduced motion change slides
+at once, and so does a browser without view transitions. How a build appears
+is the theme's too: `.build` and `.build.on`.
+
 Use only fonts whose license permits it, such as SIL Open Font License faces
 from Google Fonts, and fall back to generic families (`system-ui`, `serif`,
 `monospace`) so the deck still reads well offline. The default theme uses Geist

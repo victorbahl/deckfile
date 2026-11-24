@@ -29,6 +29,8 @@
     data-fr="…" on <title>              the title of the page in French
   The engine sets .current on the slide shown, .on on each build revealed and .open on the detail shown, and adds a
   <span class="counter"> to every slide and a <button class="detail-close"> to every detail.
+  Transitions: --slide-transition on :root, in the theme, changes slides in a view transition, typed forward or backward;
+    the theme animates ::view-transition-old(root) and ::view-transition-new(root). Builds are the theme's .build and .build.on.
   URL: ?print opens the print dialog once loaded; ?presenter is the presenter window; ?view is one read-only slide, used
   for the presenter's panes and the edit view's thumbnails and layout previews.
   The README describes the presenter and edit views.
@@ -211,16 +213,34 @@
       select(null);
     }
     clearTimeout(autoTimer);
+    const from = i;
     i = clamp(n, 0, slides.length - 1);
     det = k;
-    slides.forEach((s, x) => s.classList.toggle('current', x === i));
-    drawDetails();
+    // the slide's builds are set while it is still hidden; then it shows, in a view transition when the theme has one
     builds(slides[i]).forEach(st => setStep(st, built));
+    turn(from, () => {
+      slides.forEach((s, x) => s.classList.toggle('current', x === i));
+      drawDetails();
+    });
     if (mode === 'deck') store.set(i);
     drawNotes();
     if (mode === 'deck' && !built && slides[i].dataset.auto !== undefined) autoBuild(+slides[i].dataset.auto || 500);
     if (editing) drawEdit();
     sync();
+  }
+  // Transitions. A theme that sets --slide-transition on :root (any value but none) has the show change slides inside
+  // document.startViewTransition, typed forward or backward, and animates ::view-transition-old(root) and -new(root).
+  // Not in the edit view, the presenter's panes or print, nor for reduced motion; without the API the slide just changes.
+  // The state (i, det, builds) changes at once, so a second press while one runs goes on from the new slide
+  const transitions = () => mode === 'deck' && !editing && !!document.startViewTransition &&
+    !matchMedia('(prefers-reduced-motion: reduce)').matches &&
+    !['', 'none'].includes(getComputedStyle(document.documentElement).getPropertyValue('--slide-transition').trim());
+  function turn(from, draw) {
+    if (from === i || !transitions()) return draw();
+    const t = document.startViewTransition({ update: draw, types: [i > from ? 'forward' : 'backward'] });
+    // a press while one runs skips its animation; that is expected, not an error
+    t.ready.catch(() => {});
+    t.finished.catch(() => {});
   }
   function autoBuild(delay) {
     const step = () => {

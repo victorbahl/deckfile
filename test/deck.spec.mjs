@@ -614,6 +614,40 @@ test.describe('slide view', () => {
     expect(page.url()).toBe(file);
   });
 
+  test('a theme with --slide-transition changes slides in a view transition, typed by direction', async ({ page }) => {
+    // record each view transition the engine starts, and its types
+    const spy = () => {
+      window.vts = [];
+      const start = document.startViewTransition.bind(document);
+      document.startViewTransition = o => { window.vts.push(o.types); return start(o); };
+    };
+    const themed = readFileSync(deck, 'utf8').replace('</head>', '<style>:root{--slide-transition:dissolve}</style>\n</head>');
+    await page.goto(pathToFileURL(tempFile(themed)).href);
+    await page.evaluate(spy);
+    await page.keyboard.press('ArrowDown');
+    await expect.poll(() => current(page)).toBe(1);
+    await page.keyboard.press('ArrowUp');
+    await expect.poll(() => current(page)).toBe(0);
+    expect(await page.evaluate(() => window.vts)).toEqual([['forward'], ['backward']]);
+    // a build is not a change of slide; nor is the edit view; reduced motion has none
+    const { manual } = await info(page);
+    await goTo(page, manual);
+    await page.evaluate(() => { window.vts = []; });
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('e');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Escape');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.keyboard.press('ArrowDown');
+    expect(await page.evaluate(() => window.vts)).toEqual([]);
+    // without the property, as in the default theme, slides change at once
+    await page.goto(url);
+    await page.evaluate(spy);
+    await page.keyboard.press('ArrowDown');
+    expect(await current(page)).toBe(1);
+    expect(await page.evaluate(() => window.vts)).toEqual([]);
+  });
+
   test('a click on a control of a slide does not move the deck', async ({ page }) => {
     await page.goto(pathToFileURL(tempFile(firstSlide(readFileSync(deck, 'utf8'), CONTROLS))).href);
     await page.locator(`${CUR} input`).click();

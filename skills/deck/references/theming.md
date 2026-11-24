@@ -91,3 +91,7 @@ h1,h2{font-family:var(--font-body);text-transform:uppercase;letter-spacing:.01em
 
 Override, don't fork: keep the engine blocks intact, so `deckfile update` can
 bring in later engine fixes without merge pain.
+
+## Transitions
+
+`--slide-transition` on `:root`, set to any value but `none`, makes the show change slides inside a view transition, typed `forward` or `backward`. The theme animates `::view-transition-old(root)` and `::view-transition-new(root)`, by direction with `html:active-view-transition-type(backward)`. Keep it short and calm: a dissolve is `::view-transition-old(root){animation:none}` and `::view-transition-new(root){animation:.45s ease both fade-in}`. The edit view, the presenter's panes, print and reduced motion change slides at once. How a build appears is `.build` and `.build.on`.
