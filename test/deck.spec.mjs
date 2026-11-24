@@ -608,6 +608,10 @@ test.describe('slide view', () => {
     expect(page.url()).toBe(file);
     await page.reload();
     expect(await current(page)).toBe(2);
+    // and so does a # typed in the address of the open deck
+    await page.goto(file + '#part-2');
+    await expect.poll(() => current(page)).toBe(1);
+    expect(page.url()).toBe(file);
   });
 
   test('a click on a control of a slide does not move the deck', async ({ page }) => {

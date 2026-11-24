@@ -528,6 +528,13 @@
     history.replaceState(history.state, '', location.href.split('#')[0]);
   }
   show(asked >= 0 || store.get(EDIT_KEY) ? i : land());
+  // a # typed in the address of the open deck is no reload: show that slide too, then drop the # again
+  if (mode === 'deck') addEventListener('hashchange', () => {
+    const to = slideNamed(location.hash);
+    if (to < 0) return;
+    history.replaceState(history.state, '', location.href.split('#')[0]);
+    show(to);
+  });
   // keep the screen awake while the deck shows; the browser drops the lock when the tab is hidden, and may refuse it
   const awake = () => { if (document.visibilityState === 'visible') navigator.wakeLock?.request('screen').catch(() => {}); };
   if (mode !== 'view') { awake(); document.addEventListener('visibilitychange', awake); }
