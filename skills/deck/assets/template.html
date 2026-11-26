@@ -58,6 +58,9 @@ html,body{margin:0;height:100%;overflow:hidden}
 /* languages: a version of a text in another language than the one shown */
 [data-lang-off]{display:none!important}
 
+/* themes: an element of another theme than the deck's */
+[data-theme-off]{display:none!important}
+
 /* speaker notes: placed by the presenter and edit views */
 #notes{overflow:auto}
 #notes::before{content:"Speaker notes";display:block}
@@ -803,6 +806,10 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
                                         are versions of the same text. Text without lang shows in every language.
     data-set-lang="fr" on a button      a click shows the deck in French; L switches language too
     data-fr="…" on <title>              the title of the page in French
+  Themes: data-themes="light dark" on <html> lists the themes in the file, data-theme="light" on <html> is the deck's.
+    data-theme="dark" on any element    there only in that theme: an element on a slide, a <style data-deck="theme">
+                                        block or a <link rel="icon"> in <head>. Without it, an element is in every theme.
+    The theme is chosen in the edit view and written by Save; a public copy keeps only that theme, and only the assets it uses.
   The engine sets .current on the slide shown, .on on each build revealed and .open on the detail shown, and adds a
   <span class="counter"> to every slide and a <button class="detail-close"> to every detail.
   Assets: <script type="application/json" data-deck="assets"> after the slides holds the deck's images and fonts as data URIs,
@@ -985,6 +992,50 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
   const nextLang = () => langs[(langs.indexOf(cur) + 1) % langs.length];
   drawLang();
 
+  // Themes. data-themes="a b" on <html> lists the themes in the file, data-theme on <html> is the one the deck has. An
+  // element, a style block or a favicon with data-theme="b" is only there in theme b; one without is there in every theme.
+  // Unlike the language, the theme is the author's: chosen in the edit view and written by Save, never by a viewer's key
+  const themes = (root.dataset.themes || '').split(/\s+/).filter(Boolean);
+  let theme = themes.includes(root.dataset.theme) ? root.dataset.theme : themes[0];
+  const THEMED = 'head [data-theme], body [data-theme]';
+  // an element of another theme is marked data-theme-off, its style sheet is disabled and its favicon's rel is set aside
+  // in data-theme-rel; none of that is written to the file
+  function markTheme(el) {
+    const off = el.dataset.theme !== theme;
+    el.toggleAttribute('data-theme-off', off);
+    if (el.matches('style, link[rel~="stylesheet"]')) {
+      if (el.sheet) el.sheet.disabled = off;
+      else el.addEventListener('load', () => { el.sheet.disabled = el.hasAttribute('data-theme-off'); }, { once: true });
+    }
+    // a favicon is turned off by its rel, changed in place so that the file keeps its attributes in their order
+    if (off && el.matches('link[rel~="icon"]')) {
+      el.dataset.themeRel = el.getAttribute('rel');
+      el.setAttribute('rel', 'theme-off');
+    } else if (!off && el.dataset.themeRel !== undefined) {
+      el.setAttribute('rel', el.dataset.themeRel);
+      delete el.dataset.themeRel;
+    }
+  }
+  function drawTheme() {
+    if (themes.length < 2) return;
+    root.dataset.theme = theme;
+    document.querySelectorAll(THEMED).forEach(markTheme);
+  }
+  // give the deck theme t; the presenter view and the thumbnails follow
+  function setTheme(t) {
+    if (!themes.includes(t) || t === theme) return;
+    theme = t;
+    drawTheme();
+    drawNotes();
+    if (editing) {
+      drawEdit();
+      slides.forEach((s, n) => sendThumb(n));
+    }
+    sync();
+  }
+  const nextTheme = () => themes[(themes.indexOf(theme) + 1) % themes.length];
+  drawTheme();
+
   // the slide number, in a <span class="counter"> the engine appends to every slide; skipped slides have none and are not counted
   function renumber() {
     const all = shown();
@@ -1119,7 +1170,7 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
   function sync() {
     if (mode !== 'deck' || !presenterWin || presenterWin.closed) return;
     const k = builds(slides[i]).filter(stepOn).length;
-    presenterWin.postMessage({ deck: 'state', i, k, d: det, lang: cur }, '*');
+    presenterWin.postMessage({ deck: 'state', i, k, d: det, lang: cur, theme }, '*');
   }
   // presenter: mirror the deck's state into the current and next panes, notes and labels
   function render(n, k, d = -1) {
@@ -1131,9 +1182,9 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
     // otherwise the next slide as it first appears (data-auto slides fully built, since that is where they end up)
     const nextBuild = left > 0 && slides[i].dataset.auto === undefined;
     const after = seek(i + 1, 1), all = shown();
-    pv.cur.contentWindow.postMessage({ deck: 'view', i, k, d, lang: cur }, '*');
-    pv.next.contentWindow.postMessage(nextBuild ? { deck: 'view', i, k: k + 1, lang: cur }
-      : { deck: 'view', i: after, k: slides[after].dataset.auto !== undefined ? -1 : 0, lang: cur }, '*');
+    pv.cur.contentWindow.postMessage({ deck: 'view', i, k, d, lang: cur, theme }, '*');
+    pv.next.contentWindow.postMessage(nextBuild ? { deck: 'view', i, k: k + 1, lang: cur, theme }
+      : { deck: 'view', i: after, k: slides[after].dataset.auto !== undefined ? -1 : 0, lang: cur, theme }, '*');
     pv.label.textContent = nextBuild ? 'Next build' : 'Next slide';
     pv.end.hidden = nextBuild || after !== i;
     pv.count.textContent = skips(slides[i]) ? 'Skipped slide' : `Slide ${all.indexOf(slides[i]) + 1} of ${all.length}`;
@@ -1156,7 +1207,7 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
     help: 'M8 14.5a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13zM6.2 6.2a1.9 1.9 0 1 1 2.8 1.7c-.6.3-1 .8-1 1.4M8 11.6v.1',
     bubble: 'M3 2.5h10A1.5 1.5 0 0 1 14.5 4v6a1.5 1.5 0 0 1-1.5 1.5H8L4.5 14v-2.5H3A1.5 1.5 0 0 1 1.5 10V4A1.5 1.5 0 0 1 3 2.5z',
     save: 'M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11', down: 'M8 3v10M3.5 8.5 8 13l4.5-4.5', check: 'M3 8.5 6.5 12 13 4.5',
-    plus: 'M8 3v10M3 8h10', lang: 'M8 14.5a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13zM1.5 8h13M8 1.5c-1.9 1.8-2.8 4-2.8 6.5s.9 4.7 2.8 6.5c1.9-1.8 2.8-4 2.8-6.5S9.9 3.3 8 1.5z', detail: 'M2.5 3h11a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM8.5 3v10M10.5 6h2M10.5 8.5h2', saveAs: 'M6.5 3v7M3.5 7l3 3 3-3M2.5 13.5h11M12.5 2v4M10.5 4h4', chevron: 'M4.5 6.5 8 10l3.5-3.5', skip: 'M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM3 2.5l10 11'
+    plus: 'M8 3v10M3 8h10', lang: 'M8 14.5a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13zM1.5 8h13M8 1.5c-1.9 1.8-2.8 4-2.8 6.5s.9 4.7 2.8 6.5c1.9-1.8 2.8-4 2.8-6.5S9.9 3.3 8 1.5z', detail: 'M2.5 3h11a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM8.5 3v10M10.5 6h2M10.5 8.5h2', saveAs: 'M6.5 3v7M3.5 7l3 3 3-3M2.5 13.5h11M12.5 2v4M10.5 4h4', chevron: 'M4.5 6.5 8 10l3.5-3.5', theme: 'M8 1.5a6.5 6.5 0 0 0 0 13c.7 0 1.2-.5 1.2-1.2 0-.3-.1-.6-.3-.8-.2-.2-.3-.5-.3-.8 0-.7.5-1.2 1.2-1.2h1.4a3.3 3.3 0 0 0 3.3-3.3C14.5 4.1 11.6 1.5 8 1.5zM4.7 7.3h.01M6.3 4.6h.01M9.7 4.6h.01', skip: 'M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM3 2.5l10 11'
   };
   const icon = (name, size = 16) => `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" stroke="currentColor" ` +
     `stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICONS[name]}"/></svg>`;
@@ -1256,12 +1307,16 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
       pv.seen = Date.now();
       pv.link.hidden = true;
       // the heartbeat repeats the state every 2 s; only redraw when it changed
-      const langWas = cur;
+      const langWas = cur, themeWas = theme;
       if (m.lang && langs.includes(m.lang) && m.lang !== cur) {
         cur = m.lang;
         drawLang();
       }
-      if (!pv.last || pv.last[0] !== m.i || pv.last[1] !== m.k || pv.last[2] !== (m.d ?? -1) || langWas !== cur) render(m.i, m.k, m.d ?? -1);
+      if (m.theme && themes.includes(m.theme) && m.theme !== theme) {
+        theme = m.theme;
+        drawTheme();
+      }
+      if (!pv.last || pv.last[0] !== m.i || pv.last[1] !== m.k || pv.last[2] !== (m.d ?? -1) || langWas !== cur || themeWas !== theme) render(m.i, m.k, m.d ?? -1);
     } else if (mode === 'view' && m.deck === 'view' && e.source === parent) {
       // the edit view sends a thumbnail the current HTML of its slide; only accepted from this deck's own origin
       if (m.html !== undefined && e.origin === self.origin) {
@@ -1272,7 +1327,9 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
         slides[m.i] = slide;
       }
       if (m.lang && langs.includes(m.lang)) cur = m.lang;
+      if (m.theme && themes.includes(m.theme)) theme = m.theme;
       drawLang();
+      drawTheme();
       apply(m.i, m.k, m.d ?? -1);
     }
   });
@@ -1593,6 +1650,7 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
         html.editing #stage [data-lang-missing]{opacity:.45;outline:calc(1.5px / var(--scale)) dashed #FF9500;outline-offset:calc(3px / var(--scale))}
         .e-missing{margin-left:12px;color:#C93400}
         #edit-bar .e-lang{margin-left:4px;font-variant-numeric:tabular-nums}
+        #edit-bar .e-theme{margin-left:4px}
         html.editing .slide,html.editing .slide *{animation:none!important}
         html.editing #edit-layer{display:block;position:absolute;inset:0;z-index:2147483647;cursor:default;touch-action:none}
         /* marks sit in the scaled slide; dividing by --scale keeps their lines and numbers one size on screen.
@@ -1771,6 +1829,7 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
       tool('e-do-copy-slide', 'Duplicate slide', 'copy') + tool('e-do-skip-slide', 'Skip slide', 'skip') +
       tool('e-do-drop-slide', 'Delete slide', 'trash') + '</div>' +
       (langs.length > 1 ? labelled('e-lang', '', 'lang', 'The language shown and edited; a click shows the next one (L)') : '') +
+      (themes.length > 1 ? labelled('e-theme', '', 'theme', 'The theme of the deck, written by Save; a click gives it the next one') : '') +
       '<div class="e-mode">' + labelled('e-mode-edit', 'Edit', 'pencil', 'A click on the slide selects, a double-click types') +
       labelled('e-mode-suggest', 'Suggest', 'bubble', 'A click on the slide suggests a change') + '</div>' +
       tool('e-do-undo', 'Undo', 'reset') +
@@ -1869,6 +1928,7 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
     };
     for (const [selector, fn] of Object.entries(clicks)) bar.querySelector(selector).addEventListener('click', fn);
     bar.querySelector('.e-lang')?.addEventListener('click', () => { settle(); setLang(nextLang()); });
+    bar.querySelector('.e-theme')?.addEventListener('click', () => changeTheme(nextTheme()));
     ed.undo.disabled = true;
     status.querySelector('.e-notes').addEventListener('click', () => act('n'));
     // a side pane folds away, and the slide takes its room; for this visit only
@@ -2368,13 +2428,15 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
     ed.editClear.disabled = !ed.unsaved.length;
     const list = [];
     let shown = null;
-    [...ed.unsaved].sort((x, y) => slides.indexOf(x.slide) - slides.indexOf(y.slide)).forEach(c => {
-      const n = slides.indexOf(c.slide);
+    // an edit of the whole deck (its theme) has no slide, and comes first
+    const at = c => c.slide === null ? -2 : slides.indexOf(c.slide);
+    [...ed.unsaved].sort((x, y) => at(x) - at(y)).forEach(c => {
+      const n = at(c);
       if (n !== shown) {
         shown = n;
         const head = headingOf(c.slide), label = ed.slideLabels[n] ||= slideLabel(n);
         label.className = 'e-slide' + (n === i ? ' e-cur' : '');
-        label.textContent = n < 0 ? 'Deleted slides' : `Slide ${n + 1}${head ? ' · ' + head : ''}`;
+        label.textContent = n === -2 ? 'Whole deck' : n < 0 ? 'Deleted slides' : `Slide ${n + 1}${head ? ' · ' + head : ''}`;
         list.push(label);
       }
       list.push(c.row ||= unsavedRow(c));
@@ -2432,6 +2494,11 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
     const missing = new Set([...stage.querySelectorAll('[data-lang-missing]')].map(x => versionsAround(x)[0])).size;
     ed.missing.hidden = !missing;
     ed.missing.textContent = `${missing} text${missing > 1 ? 's' : ''} without ${cur?.toUpperCase()}`;
+    const themeButton = document.querySelector('#edit-bar .e-theme');
+    if (themeButton) {
+      themeButton.lastChild.textContent = theme;
+      themeButton.setAttribute('aria-label', `Theme: ${theme}, change to ${nextTheme()}`);
+    }
     const langButton = document.querySelector('#edit-bar .e-lang');
     if (langButton) {
       langButton.lastChild.textContent = cur.toUpperCase();
@@ -2494,12 +2561,14 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
     // a deck with languages: the agent is told once to make each change in every language, as a suggestion is made in one
     const many = langs.length > 1 ? `The deck is in ${langs.map(l => l.toUpperCase()).join(' and ')} (lang attributes): ` +
       'make each change in every language, unless the suggestion says otherwise. ' : '';
+    const themed = themes.length > 1 ? `The deck has the themes ${themes.join(' and ')}, and is in ${theme}: an element with ` +
+      'data-theme is only there in that theme. ' : '';
     // A position only for a point or an area drawn on the slide: an element clicked is found by its selector and its text,
     // and its box in pixels would only be noise for the agent
     const items = ed.items.filter(s => s.note.trim()), placed = s => !s.picked;
     return `Improve the deck \`${file}\` with the suggestions below. Slides are the \`<section class="slide">\` elements, ` +
       'numbered from 1 in document order. ' + (items.some(placed) ? 'Positions are in the 1920×1080 slide frame, origin top left. ' : '') +
-      'Each Element is a CSS selector for it in the deck as it was when suggested. ' + many +
+      'Each Element is a CSS selector for it in the deck as it was when suggested. ' + many + themed +
       "Keep to the deck's existing conventions.\n\n" +
       items.map((s, n) =>
         `## ${n + 1}. Slide ${s.slide + 1}${s.heading ? ': ' + s.heading : ''}\n\n` +
@@ -2542,7 +2611,7 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
   // the element next to this one, passing over the engine's counter and the notes
   function neighbour(el, step) {
     do el = step < 0 ? el.previousElementSibling : el.nextElementSibling;
-    while (el?.matches(OFF_SLIDE));
+    while (el?.matches(OFF_SLIDE) || el?.hasAttribute('data-theme-off'));
     return el;
   }
   function select(el) {
@@ -2824,9 +2893,17 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
     else slides.forEach((s, n) => sendThumb(n));
     afterChange();
   }
+  // Give the deck another theme, as an edit of the whole deck: it has no slide, and keeps the theme it had
+  function changeTheme(to) {
+    settle();
+    remember({ slide: null, theme, what: 'Changed theme', detail: `${theme} → ${to}`, op: { kind: 'theme', to } });
+    setTheme(to);
+    afterChange();
+  }
   // after a change the view stays where it was, the open detail included, unless told where to go
   function afterChange(showing = slides[i], id = openDetail() ? idOf(openDetail()) : 0) {
     const sel = ed.sel;
+    drawTheme();  // a slide put back or added carries the marks of the theme it was copied in
     relocate();
     saveSuggestions();
     showSlide(showing, id);
@@ -2840,10 +2917,11 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
     // an edit not saved yet is as if it never happened; taking back a saved one is an edit in itself
     const index = ed.unsaved.indexOf(last);
     if (index < 0) {
-      const state = last.order ? { order: [...slides] } : { tree: twin(last.slide) };
+      const state = last.order ? { order: [...slides] } : last.theme !== undefined ? { theme } : { tree: twin(last.slide) };
       ed.unsaved.push({ slide: last.slide, ...state, what: 'Undid: ' + last.what, detail: last.detail, undone: last });
     } else ed.unsaved.splice(index, 1);
     if (last.order) arrange(last.order);
+    else if (last.theme !== undefined) setTheme(last.theme);
     else putBack(last.slide, twin(last.tree));
     afterChange(last.slide, last.det);
   }
@@ -2855,6 +2933,18 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
   // saved edits always go, as they only work in order, and so do the edits on a slide whose adding goes
   function without(c) {
     const later = ed.unsaved.slice(ed.unsaved.indexOf(c) + 1), gone = [c], kept = [];
+    // a theme edit sets the theme, so without it the deck has the theme it had before, or the one a later edit gave it
+    if (c.theme !== undefined) {
+      let theme = c.theme;
+      later.filter(x => x.theme !== undefined).forEach(x => {
+        if (x.undone) gone.push(x);
+        else {
+          kept.push({ record: x, was: { theme } });
+          theme = x.op.to;
+        }
+      });
+      return { theme, gone, kept };
+    }
     if (c.order) {
       let order = c.order;
       later.forEach(x => {
@@ -2877,7 +2967,7 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
   }
   // an Undid row goes back to before that undo, so what it undid can be undone again
   function removeEdit(c) {
-    const { root, order, gone, kept } = without(c);
+    const { root, order, theme: to, gone, kept } = without(c);
     for (const x of gone.reverse()) {
       ed.unsaved.splice(ed.unsaved.indexOf(x), 1);
       if (x.undone) {
@@ -2888,6 +2978,7 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
     }
     kept.forEach(k => Object.assign(k.record, k.was));
     if (order) arrange(order);
+    else if (to !== undefined) setTheme(to);
     else putBack(c.slide, root);
     afterChange(c.slide, c.det);
   }
@@ -2918,7 +3009,7 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
     // one still loading gets the slide when it has loaded
     [...subs.children].forEach((sub, k) => { if (sub.loaded) sendView(sub.querySelector('iframe'), bare(slides[n]).outerHTML, k); });
   }
-  const sendView = (f, html, d = -1) => f.contentWindow.postMessage({ deck: 'view', i: 0, k: -1, d, html, lang: cur }, '*');
+  const sendView = (f, html, d = -1) => f.contentWindow.postMessage({ deck: 'view', i: 0, k: -1, d, html, lang: cur, theme }, '*');
   function textNodes(el) {
     const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), t = [];
     while (w.nextNode()) t.push(w.currentNode);
@@ -2985,6 +3076,8 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
     copy.querySelectorAll('[data-detail][aria-expanded]').forEach(o => o.removeAttribute('aria-expanded'));
     copy.querySelectorAll('[data-lang-off], [data-lang-missing]').forEach(x => { x.removeAttribute('data-lang-off'); x.removeAttribute('data-lang-missing'); });
     copy.querySelectorAll('[data-set-lang][aria-pressed]').forEach(b => b.removeAttribute('aria-pressed'));
+    copy.querySelectorAll('[data-theme-off]').forEach(x => x.removeAttribute('data-theme-off'));
+    copy.querySelectorAll('[data-theme-rel]').forEach(x => { x.setAttribute('rel', x.dataset.themeRel); x.removeAttribute('data-theme-rel'); });
     if (langs.length > 1) {
       ownLang === null ? copy.removeAttribute('lang') : copy.setAttribute('lang', ownLang);
       const t = copy.querySelector('title');
@@ -3062,7 +3155,8 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
     showBox(option('e-save-go', 'save', 'Save', 'Writes the deck to its file, with your changes. Cmd/Ctrl+S') +
       option('e-copy-full', 'copy', 'Save a copy…', 'The whole deck as it is now, under a new name. This deck stays the one you edit.') +
       option('e-copy-go', 'saveAs', 'Save public copy…', 'A copy to send to your audience, without the speaker notes, ' +
-        (left || 'any skipped slides') + ', the comments between the slides and the edit view.'));
+        (left || 'any skipped slides') + ', the comments between the slides and the edit view' +
+        (themes.length > 1 ? `, in the ${theme} theme only.` : '.')));
   }
   // under Save, before the file dialog: which file to choose there, and why; `wrong` is the name of one that was not it
   function showFile(wrong) {
@@ -3081,8 +3175,28 @@ Suggestion: <span class="w"><span lang="en">Make this heading shorter</span><spa
     [...out, ...copy.querySelectorAll('.s-notes, .slide[data-skip], .detail[data-skip], template[data-deck="layouts"]')].forEach(drop);
     all.querySelectorAll('[data-detail]').forEach(o => { if (!all.querySelector(`.detail[id="${CSS.escape(o.dataset.detail)}"]`)) o.removeAttribute('data-detail'); });
     all.setAttribute('data-public', '');
+    // only the deck's theme, and only the assets that what is left uses
+    if (themes.length > 1) {
+      copy.querySelectorAll(THEMED).forEach(x => { if (x.dataset.theme !== theme) drop(x); });
+      copy.removeAttribute('data-themes');
+    }
+    unused(copy);
     const engine = copy.querySelector('script[data-deck="engine"]');
     if (engine) engine.textContent = engine.textContent.replace(/\n *\/\/ -+ the edit view[\s\S]*\/\/ -+ end of the edit view[^\n]*/, '');
+  }
+  // Leave out of a copy the assets nothing in it names: no <img data-asset>, var(--asset-…) or local("asset:…") outside the
+  // engine and the block itself. The block keeps its layout, one asset per line
+  function unused(copy) {
+    const block = copy.querySelector('script[data-deck="assets"]');
+    let all;
+    try { all = JSON.parse(block?.textContent || '{}'); } catch { return; }
+    const rest = copy.cloneNode(true);
+    rest.querySelectorAll('script[data-deck="engine"], script[data-deck="assets"]').forEach(s => s.remove());
+    // every name the copy uses; asset names are word characters and dashes, as var(--asset-…) needs
+    const text = rest.outerHTML, names = Object.keys(all);
+    const named = new Set([...text.matchAll(/(?:data-asset="|--asset-|asset:)([\w-]+)/g)].map(m => m[1]));
+    const used = names.filter(n => named.has(n));
+    if (used.length < names.length) block.textContent = '\n{\n' + used.map(n => JSON.stringify(n) + ':' + JSON.stringify(all[n])).join(',\n') + '\n}\n';
   }
   // A copy of the deck as it is now, under a name of its own: whole, or trimmed to hand out. It goes to a file chosen
   // in a dialog where the browser has one, else it downloads. This deck stays the one that is edited and saved

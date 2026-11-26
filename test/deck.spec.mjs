@@ -4161,3 +4161,169 @@ test.describe('languages', () => {
     expect(await seen(page)).toContain('Bonjour');
   });
 });
+
+// a deck in two themes, light and dark: a style block, a favicon and an element of each, and an asset for each
+const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+const THEMED = `<section class="slide">
+  <h2>Themes</h2>
+  <img class="logo" data-theme="light" data-asset="logo-light" alt="Light logo" width="40" height="40">
+  <img class="logo" data-theme="dark" data-asset="logo-dark" alt="Dark logo" width="40" height="40">
+  <p class="both">In both</p>
+</section>
+
+<section class="slide">
+  <h2>Second</h2>
+</section>`;
+const themed = (html, slides = THEMED) => html
+  .replace(/<html lang="en"[^>]*>/, '<html lang="en" data-themes="light dark" data-theme="light">')
+  .replace(/<link rel="icon"[^>]*>/, '<link rel="icon" data-theme="light" href="data:image/svg+xml,%3Csvg%3E%3C/svg%3E#light">\n' +
+    '<link rel="icon" data-theme="dark" href="data:image/svg+xml,%3Csvg%3E%3C/svg%3E#dark">')
+  .replace('</head>', '<style data-deck="theme" data-theme="dark">\n.slide{--mark:dark}\n.slide .both{color:rgb(255, 0, 0);background-image:var(--asset-bg-dark)}\n</style>\n</head>')
+  .replace(/<div id="stage">[\s\S]*?<\/div>\s*<script data-deck="engine">/, `<div id="stage">\n\n${slides}\n\n</div>\n\n<script data-deck="engine">`)
+  .replace(/<\/body>\s*<\/html>\s*$/, '<script type="application/json" data-deck="assets">\n{\n' +
+    ['logo-light', 'logo-dark', 'bg-dark', 'spare'].map(n => `"${n}":"${PNG}"`).join(',\n') + '\n}\n</script>\n</body>\n</html>\n');
+async function openThemed(page, slides) {
+  await page.goto(pathToFileURL(tempFile(themed(readFileSync(deck, 'utf8'), slides))).href);
+  await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
+  await page.reload();
+}
+const shownLogo = page => page.locator(`${CUR} img.logo:visible`).getAttribute('alt');
+const both = page => page.locator(`${CUR} .both`).evaluate(p => getComputedStyle(p).color);
+const icons = page => page.evaluate(() => [...document.querySelectorAll('link[rel~="icon"]')].map(l => l.href.split('#')[1]));
+const themeButton = page => page.locator('#edit-bar .e-theme');
+
+test.describe('themes', () => {
+  test('a deck with themes shows the one on <html>: its elements, its style block and its favicon', async ({ page }) => {
+    await openThemed(page);
+    expect(await shownLogo(page)).toBe('Light logo');
+    expect(await both(page)).not.toBe('rgb(255, 0, 0)');
+    expect(await icons(page)).toEqual(['light']);
+    // no key changes it in the show, and the corner bar has no button for it
+    await page.keyboard.press('t');
+    expect(await shownLogo(page)).toBe('Light logo');
+    expect(await page.locator('#deck-controls').innerHTML()).not.toContain('Theme');
+    // another theme on <html> is another deck
+    await page.goto(pathToFileURL(tempFile(themed(readFileSync(deck, 'utf8')).replace('data-theme="light">', 'data-theme="dark">'))).href);
+    expect(await shownLogo(page)).toBe('Dark logo');
+    expect(await both(page)).toBe('rgb(255, 0, 0)');
+    expect(await icons(page)).toEqual(['dark']);
+  });
+
+  test('a deck without themes has no theme button, and data-theme on an element changes nothing', async ({ page }) => {
+    await page.keyboard.press('e');
+    await expect(themeButton(page)).toHaveCount(0);
+    expect(await page.locator('[data-theme-off]').count()).toBe(0);
+  });
+
+  test('the edit view changes the theme as an edit: thumbnails follow, Undo takes it back, Save writes it', async ({ page }) => {
+    await fakeDialog(page);
+    await openThemed(page);
+    await page.keyboard.press('e');
+    await expect(themeButton(page)).toHaveText('light');
+    await expect(themeButton(page)).toHaveAttribute('aria-label', 'Theme: light, change to dark');
+    await themeButton(page).click();
+    await expect(themeButton(page)).toHaveText('dark');
+    expect(await shownLogo(page)).toBe('Dark logo');
+    expect(await both(page)).toBe('rgb(255, 0, 0)');
+    await expect(thumbSlide(page, 0).locator('img[alt="Dark logo"]')).toBeVisible();
+    await expect(thumbSlide(page, 0).locator('img[alt="Light logo"]')).toBeHidden();
+    // one edit of the whole deck in the list
+    await expect(page.locator('.e-edits-list .e-slide')).toHaveText(['Whole deck']);
+    await expect(rowSaying(page, 'Changed theme')).toContainText('light → dark');
+    // Undo takes it back
+    await page.locator('.e-do-undo').click();
+    expect(await shownLogo(page)).toBe('Light logo');
+    await expect(page.locator('.e-change')).toHaveCount(0);
+    // Save writes the theme chosen, and both themes stay in the file, with none of the marks
+    await themeButton(page).click();
+    const html = await save(page);
+    expect(html).toMatch(/<html lang="en" data-themes="light dark" data-theme="dark">/);
+    expect(html).toContain('<img class="logo" data-theme="light" data-asset="logo-light" alt="Light logo" width="40" height="40">');
+    expect(html).toContain('<link rel="icon" data-theme="light" href=');
+    expect(html).toContain('<style data-deck="theme" data-theme="dark">');
+    expect(html.slice(0, html.indexOf('<script data-deck="engine">'))).not.toMatch(/data-theme-off|data-theme-rel|theme-off/);
+    await page.goto(pathToFileURL(tempFile(html)).href);
+    expect(await shownLogo(page)).toBe('Dark logo');
+  });
+
+  test('a theme edit can be removed from the list, and taking back a saved one is an edit', async ({ page }) => {
+    await fakeDialog(page);
+    await openThemed(page);
+    await page.keyboard.press('e');
+    await themeButton(page).click();
+    await themeButton(page).click();
+    await expect(themeButton(page)).toHaveText('light');
+    // without the second, the deck has the theme the first gave it; without both, the one it had
+    await removeRow(page, 1);
+    await expect(page.locator('.e-change')).toHaveCount(1);
+    await expect(themeButton(page)).toHaveText('dark');
+    await removeRow(page, 0);
+    await expect(themeButton(page)).toHaveText('light');
+    await expect(page.locator('.e-change')).toHaveCount(0);
+    // without the first, the second sets the theme it set: light
+    await themeButton(page).click();
+    await themeButton(page).click();
+    await removeRow(page, 0);
+    await expect(page.locator('.e-change')).toHaveCount(1);
+    await expect(themeButton(page)).toHaveText('light');
+    await removeRow(page, 0);
+    // saved, then undone: the undo is an unsaved edit
+    await themeButton(page).click();
+    await save(page);
+    await page.locator('.e-do-undo').click();
+    await expect(themeButton(page)).toHaveText('light');
+    await expect(rowSaying(page, 'Undid: Changed theme')).toHaveCount(1);
+  });
+
+  test('the presenter view and its panes show the deck\'s theme', async ({ page }) => {
+    await openThemed(page);
+    await page.keyboard.press('e');
+    await themeButton(page).click();
+    await page.keyboard.press('Escape');
+    const presenter = await openPresenter(page);
+    await expect(presenter.frameLocator('.p-cur iframe').locator('.slide.current img[alt="Dark logo"]')).toBeVisible();
+    await expect(presenter.frameLocator('.p-cur iframe').locator('.slide.current img[alt="Light logo"]')).toBeHidden();
+  });
+
+  test('a public copy keeps only the deck\'s theme, and only the assets it uses', async ({ page }) => {
+    await openThemed(page);
+    await page.keyboard.press('e');
+    await themeButton(page).click();
+    await page.evaluate(() => { delete window.showSaveFilePicker; });
+    await page.locator('.e-save').click();
+    await expect(page.locator('#edit-copy .e-copy-go')).toContainText('in the dark theme only');
+    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#edit-copy .e-copy-go').click()]);
+    const html = readFileSync(await download.path(), 'utf8');
+    expect(html).not.toContain('Light logo');
+    expect(html).toContain('<img class="logo" data-theme="dark" data-asset="logo-dark" alt="Dark logo" width="40" height="40">');
+    expect(html).not.toContain('#light');
+    expect(html).toContain('#dark');
+    expect(html).toMatch(/<html lang="en" data-theme="dark">/);
+    expect(html).toContain('<style data-deck="theme" data-theme="dark">');
+    // the assets: those named by what is left, one per line; the light logo and the spare are gone
+    const block = [...html.matchAll(/<script type="application\/json" data-deck="assets">([\s\S]*?)<\/script>/g)].at(-1)[1];
+    expect(Object.keys(JSON.parse(block))).toEqual(['logo-dark', 'bg-dark']);
+    expect(block.split('\n').filter(l => l.startsWith('"')).length).toBe(2);
+    await page.goto(pathToFileURL(tempFile(html)).href);
+    expect(await shownLogo(page)).toBe('Dark logo');
+    expect(await both(page)).toBe('rgb(255, 0, 0)');
+    await expect.poll(() => page.locator(`${CUR} img.logo`).evaluate(i => i.naturalWidth)).toBe(1);
+  });
+
+  test('moving an element in the edit view passes over those of another theme', async ({ page }) => {
+    await openThemed(page);
+    await page.keyboard.press('e');
+    await clickOn(page, `${CUR} .both`);
+    await page.locator('.e-do-earlier').click();
+    // the dark logo is hidden: the paragraph goes before the light one, which is what one sees move
+    expect(await page.locator(`${CUR} > :is(h2, img, p)`).evaluateAll(all => all.map(e => e.className || e.localName)))
+      .toEqual(['h2', 'both', 'logo', 'logo']);
+  });
+
+  test('in a deck with themes, the prompt says which theme it is in', async ({ page }) => {
+    await openThemed(page);
+    await openSuggest(page);
+    await suggest(page, `${CUR} h2`, 'Shorter');
+    expect(await copied(page)).toContain('The deck has the themes light and dark, and is in light: an element with data-theme is only there in that theme.');
+  });
+});

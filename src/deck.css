@@ -22,6 +22,9 @@ html,body{margin:0;height:100%;overflow:hidden}
 /* languages: a version of a text in another language than the one shown */
 [data-lang-off]{display:none!important}
 
+/* themes: an element of another theme than the deck's */
+[data-theme-off]{display:none!important}
+
 /* speaker notes: placed by the presenter and edit views */
 #notes{overflow:auto}
 #notes::before{content:"Speaker notes";display:block}

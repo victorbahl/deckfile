@@ -39,6 +39,17 @@ Attributes:
 Only mark what changes: text without `lang` shows in every language. Put the switch on the title card.
 Speaker notes take `lang` the same way. `data-fr="…"` on `<title>` gives the page title in French.
 
+## Themes
+
+```html
+<html lang="en" data-themes="light dark" data-theme="light">          <!-- the themes in the file, and the deck's -->
+<link rel="icon" data-theme="dark" href="…">                           <!-- a favicon of one theme -->
+<style data-deck="theme" data-theme="dark">…</style>                   <!-- what dark changes; the block without data-theme is shared -->
+<img data-theme="dark" data-asset="logo-dark" alt="Dark">              <!-- only there in that theme -->
+```
+
+Only mark what changes: an element without `data-theme` is there in every theme. The theme is chosen in the edit view, not in the show.
+
 ## Details
 
 ```html

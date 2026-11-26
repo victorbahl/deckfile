@@ -92,6 +92,20 @@ h1,h2{font-family:var(--font-body);text-transform:uppercase;letter-spacing:.01em
 Override, don't fork: keep the engine blocks intact, so `deckfile update` can
 bring in later engine fixes without merge pain.
 
+## Several themes in one file
+
+A deck can carry two themes that share their layouts, two brands for example, and be given one or the other in the
+edit view. Keep what they share in the theme block, and put what one theme changes in a block of its own:
+
+```html
+<html lang="en" data-themes="light dark" data-theme="light">
+<style data-deck="theme">:root{--action:#C2310A}</style>
+<style data-deck="theme" data-theme="dark">:root{--action:#3D7BFF}</style>
+```
+
+Give the logos, icons and pictures of one theme `data-theme` too, side by side with the other theme's, and one
+`<link rel="icon">` per theme. A public copy keeps only the deck's theme, and drops the assets the other one used.
+
 ## Transitions
 
 `--slide-transition` on `:root`, set to any value but `none`, makes the show change slides inside a view transition, typed `forward` or `backward`. The theme animates `::view-transition-old(root)` and `::view-transition-new(root)`, by direction with `html:active-view-transition-type(backward)`. Keep it short and calm: a dissolve is `::view-transition-old(root){animation:none}` and `::view-transition-new(root){animation:.45s ease both fade-in}`. The edit view, the presenter's panes, print and reduced motion change slides at once. How a build appears is `.build` and `.build.on`.

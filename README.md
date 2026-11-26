@@ -160,6 +160,7 @@ The engine needs very little markup:
 | `data-detail="more"` on any element | a click opens the `<aside class="detail" id="more">` of the same slide, see [Details](#details) |
 | `id="part-2"` on a section, `<a href="#part-2">` | a link that shows that slide, its builds hidden; `deck.html#part-2` opens the deck there. An agenda can link each part to its section, and the links still work in the PDF |
 | `data-langs="en fr"` on `<html>`, `lang="fr"` on any element | the deck in two languages, one shown at a time, see [Languages](#languages) |
+| `data-themes="light dark"` and `data-theme="light"` on `<html>`, `data-theme="dark"` on any element | one deck, two themes; the edit view chooses the one it has, see [Themes](#themes) |
 | `<div class="s-notes">` inside a slide | speaker notes, for the presenter and edit views |
 | `data-public` on the stage | set by **Save public copy…** on the copy it makes: the deck opens without the edit view |
 
@@ -232,6 +233,34 @@ language, side by side:
 - The default theme styles a `.lang-switch` of such buttons, for the title
   card.
 
+### Themes
+
+One file can hold the deck in several themes, such as two brands that share
+their layouts. List them on `<html>` with the deck's own, and give what belongs
+to one theme a `data-theme`:
+
+```html
+<html lang="en" data-themes="light dark" data-theme="light">
+<link rel="icon" data-theme="light" href="…">
+<link rel="icon" data-theme="dark" href="…">
+<style data-deck="theme">…what both themes share…</style>
+<style data-deck="theme" data-theme="dark">…what dark changes…</style>
+…
+<img data-theme="light" data-asset="logo-light" alt="Light">
+<img data-theme="dark" data-asset="logo-dark" alt="Dark">
+```
+
+- An element, a style block or a favicon with `data-theme` is only there in
+  that theme; one without is there in every theme. The theme's CSS can also
+  key on `html[data-theme="dark"]`.
+- The theme is the author's, not the audience's: there is no key for it in the
+  show. In the edit view, the theme button in the toolbar gives the deck the
+  next one, as an edit you can undo; Save writes it to `<html>`. The
+  thumbnails and the presenter view follow.
+- **Save public copy…** keeps only the deck's theme: the elements, style
+  blocks and favicons of the others go, and so do the assets in the deck's
+  block that nothing left uses.
+
 Photographs live beside the deck as ordinary files and are referenced by
 relative path. Inline small things such as logos and icons as SVG; don't
 base64 large images into the HTML.
@@ -268,6 +297,9 @@ it looks.
   you edit the one shown. Deleting, duplicating or moving a text does it in
   every language. Texts with no version in the language shown are dimmed, and
   the status bar counts them.
+- In a deck with themes, the theme button in the toolbar gives the deck the
+  next one. It is an edit of the whole deck: listed first, undone like any
+  other, written by Save.
 - Add, duplicate and delete slides from the toolbar, and drag a thumbnail to
   reorder. New slides come from the layouts in the deck's
   `<template data-deck="layouts">`, which you can change or add to.
@@ -290,7 +322,8 @@ it looks.
   - **Save public copy…** makes a copy to send to your audience, named
     `…-public.html`: the deck as it is now, details included, without the
     speaker notes, the skipped slides and details, the layouts and the
-    comments between the slides. The menu
+    comments between the slides. A deck with themes keeps only its own, and
+    only the assets it still uses. The menu
     says what it leaves out, then it asks where to put the copy in Chromium and
     downloads it elsewhere. The copy has no edit view, and not the code for it
     either; it still presents and prints.
@@ -302,7 +335,8 @@ it looks.
 - **Copy prompt** puts every suggestion on the clipboard as one Markdown prompt,
   each with its slide and a selector for its element, and a position for a
   point or an area, ready to paste into Claude Code or another coding agent. In
-  a deck with languages, it asks for each change in every language.
+  a deck with languages, it asks for each change in every language; in a deck
+  with themes, it says which one the deck is in.
 - Suggestions are kept per deck in the browser's `localStorage`. One whose
   element has changed since is labelled **Changed**.
 
