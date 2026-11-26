@@ -29,6 +29,11 @@
     data-fr="…" on <title>              the title of the page in French
   The engine sets .current on the slide shown, .on on each build revealed and .open on the detail shown, and adds a
   <span class="counter"> to every slide and a <button class="detail-close"> to every detail.
+  Assets: <script type="application/json" data-deck="assets"> after the slides holds the deck's images and fonts as data URIs,
+    one per line: the deck is one file with nothing beside it, and the slides stay short to read.
+    <img data-asset="max" alt="">   the image named max        background-image:var(--asset-max)   the same, in CSS
+    @font-face{font-family:"Brand";font-weight:700;src:local("asset:brand-bold")}   a font from the block
+    The engine resolves them as the deck opens and leaves the data out of all it writes: the saved file, prompts, thumbnails.
   Transitions: --slide-transition on :root, in the theme, changes slides in a view transition, typed forward or backward;
     the theme animates ::view-transition-old(root) and ::view-transition-new(root). Builds are the theme's .build and .build.on.
   URL: ?print opens the print dialog once loaded; ?presenter is the presenter window; ?view is one read-only slide, used
@@ -47,6 +52,50 @@
   const canEdit = mode === 'deck' && !document.querySelector('#stage[data-public]');  // a public copy has no edit view
   const here = location.href.split(/[?#]/)[0];
   const KEY = 'deck:' + location.pathname;
+  // Assets: the images and fonts of the deck, by name, from its <script type="application/json" data-deck="assets">
+  // The block comes after the engine, at the end of the file, so it is read once the page is parsed
+  let assets = {};
+  const asset = name => typeof assets[name] === 'string' && assets[name].startsWith('data:') ? assets[name] : null;
+  // an <img data-asset> gets its data as src; the src goes again in what the engine writes (see bare)
+  const useAssets = () => document.querySelectorAll('img[data-asset]').forEach(img => {
+    const data = asset(img.dataset.asset);
+    if (data && img.getAttribute('src') !== data) img.src = data;
+  });
+  function loadAssets() {
+    try { assets = JSON.parse(document.querySelector('script[data-deck="assets"]')?.textContent || '{}'); } catch { assets = {}; }
+    if (!Object.keys(assets).length) return;
+    // var(--asset-name) in CSS, from a style sheet that is not in the document, so it is never written to the file
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(':root{' + Object.keys(assets).filter(n => /^[\w-]+$/.test(n) && asset(n) && !asset(n).startsWith('data:font'))
+      .map(n => `--asset-${n}:url("${asset(n)}");`).join('') + '}');
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+    // a font: each @font-face whose src is local("asset:name") gets that font, with the rule's family, weight and style
+    for (const s of document.styleSheets) {
+      let rules;
+      try { rules = s.cssRules; } catch { continue; }
+      for (const r of rules) {
+        const name = r instanceof CSSFontFaceRule && r.style.getPropertyValue('src').match(/local\(\s*["']?asset:([\w-]+)["']?\s*\)/)?.[1];
+        if (!name || !asset(name)) continue;
+        const d = p => r.style.getPropertyValue(p) || undefined;
+        const face = new FontFace(d('font-family').replace(/^["']|["']$/g, ''), `url("${asset(name)}")`,
+          { weight: d('font-weight'), style: d('font-style'), display: d('font-display') });
+        document.fonts.add(face);
+        face.load().catch(() => {});
+      }
+    }
+    useAssets();
+    // and so do the images the edit view adds, and the slides a thumbnail is sent
+    new MutationObserver(useAssets).observe(document.body, { childList: true, subtree: true });
+  }
+  document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', loadAssets) : loadAssets();
+  // an element as the deck writes it: an <img data-asset> without the data the engine filled in
+  function bare(el) {
+    const c = el.cloneNode(true);
+    [c, ...c.querySelectorAll('img[data-asset]')].forEach(img => {
+      if (img.matches('img[data-asset]') && img.getAttribute('src') === asset(img.dataset.asset)) img.removeAttribute('src');
+    });
+    return c;
+  }
   // the languages of the deck, and the one shown: from ?lang=, or as chosen last in this browser, or else the first
   const root = document.documentElement, langs = (root.dataset.langs || '').split(/\s+/).filter(Boolean);
   const LANG_KEY = KEY + ':lang', ownLang = root.getAttribute('lang'), titleEl = document.querySelector('title'), ownTitle = titleEl?.textContent;
@@ -1359,7 +1408,7 @@
   // what a suggestion records about its element: how the deck writes it, and where to find it again
   function describe(el) {
     // its HTML as written in the deck: without the slide counter and the classes the engine adds
-    const clone = el.cloneNode(true);
+    const clone = bare(el);
     clone.querySelectorAll('.counter').forEach(c => c.remove());
     [clone, ...clone.querySelectorAll('.on, .current')].forEach(c => c.classList.remove('on', 'current'));
     return { heading: headingOf(slideOf(el)), whole: slides.includes(el), path: pathOf(el),
@@ -2071,7 +2120,7 @@
   function sendThumb(n) {
     const t = ed.thumbs[n];
     if (!t) return;
-    sendView(t.querySelector('iframe'), slides[n].outerHTML);
+    sendView(t.querySelector('iframe'), bare(slides[n]).outerHTML);
     const subs = t.querySelector('.e-subs'), count = details(slides[n]).length;
     while (subs.children.length > count) subs.lastChild.remove();
     while (subs.children.length < count) {
@@ -2084,14 +2133,14 @@
         deleteDetail(slides[n], k);
       });
       const f = sub.querySelector('iframe');
-      f.addEventListener('load', () => { sub.loaded = true; sendView(f, slides[n].outerHTML, k); });
+      f.addEventListener('load', () => { sub.loaded = true; sendView(f, bare(slides[n]).outerHTML, k); });
       f.src = here + '?view';
       subs.append(sub);
       // sub-thumbnails above the current slide push it down: it stays in view
       if (n < i) ed.thumbs[i]?.scrollIntoView({ block: 'nearest' });
     }
     // one still loading gets the slide when it has loaded
-    [...subs.children].forEach((sub, k) => { if (sub.loaded) sendView(sub.querySelector('iframe'), slides[n].outerHTML, k); });
+    [...subs.children].forEach((sub, k) => { if (sub.loaded) sendView(sub.querySelector('iframe'), bare(slides[n]).outerHTML, k); });
   }
   const sendView = (f, html, d = -1) => f.contentWindow.postMessage({ deck: 'view', i: 0, k: -1, d, html, lang: cur }, '*');
   function textNodes(el) {
@@ -2152,7 +2201,7 @@
   // the deck as its file says it: this document without what the engine added to it, and laid out as the template is.
   // The parser moves or drops the white space around <head> and </body>. `change` alters the copy before it is written
   function serialize(change) {
-    const copy = document.documentElement.cloneNode(true);
+    const copy = bare(document.documentElement);
     change?.(copy);
     copy.querySelectorAll('#notes, #deck-controls, #edit-bar, #edit-rail, #edit-status, #edit, #edit-ask, #edit-layer, #edit-layouts, #edit-copy, #edit-css, .slide > .counter:last-child, .detail > .detail-close:last-child, .detail-page').forEach(n => n.remove());
     copy.querySelectorAll('.slide.current').forEach(s => s.classList.remove('current'));

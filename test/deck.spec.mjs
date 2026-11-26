@@ -648,6 +648,25 @@ test.describe('slide view', () => {
     expect(await page.evaluate(() => window.vts)).toEqual([]);
   });
 
+  test('assets in the deck\'s own block show as images, CSS and fonts, and stay out of what it writes', async ({ page }) => {
+    // a 1x1 PNG, and the same as a CSS background; the font is the deck's own, by name
+    const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    const slide = `<section class="slide">\n  <h2>Assets</h2>\n  <img class="a" data-asset="dot" alt="A dot">\n  <div class="b" style="width:10px;height:10px;background-image:var(--asset-dot)"></div>\n</section>`;
+    const html = readFileSync(deck, 'utf8').replace(/<div id="stage">[\s\S]*?<\/div>\s*<script data-deck="engine">/,
+      `<div id="stage">\n\n${slide}\n\n</div>\n\n<script data-deck="engine">`)
+      .replace(/<\/body>\s*<\/html>\s*$/, `<script type="application/json" data-deck="assets">\n{"dot":"${png}"}\n</script>\n</body>\n</html>\n`);
+    await fakeDialog(page);
+    await page.goto(pathToFileURL(tempFile(html)).href);
+    await expect.poll(() => page.locator(`${CUR} img.a`).evaluate(i => i.naturalWidth)).toBe(1);
+    expect(await page.locator(`${CUR} .b`).evaluate(d => getComputedStyle(d).backgroundImage)).toContain('data:image/png');
+    // the saved file has the data once, in the block: not in the <img>, not in a style
+    await page.keyboard.press('e');
+    const saved = await save(page);
+    expect(saved.split(png).length - 1).toBe(1);
+    expect(stageOf(saved)).toContain('<img class="a" data-asset="dot" alt="A dot">');
+    expect(saved).not.toContain('--asset-dot:url');
+  });
+
   test('a click on a control of a slide does not move the deck', async ({ page }) => {
     await page.goto(pathToFileURL(tempFile(firstSlide(readFileSync(deck, 'utf8'), CONTROLS))).href);
     await page.locator(`${CUR} input`).click();
